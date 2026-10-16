@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { categoryLabel, storyPath } from '../../../shared/catalog.js'
 import { useReveal } from '../landing/hooks'
 import { ArrowIcon } from '../landing/ui'
+import { SOCIAL_LINKS } from '../config/site'
 import { loadStories, loadStory } from './api'
 import { Gallery } from './Gallery'
-import { A, Lightbox, SocialRow, useCopy, usePageMeta } from './ui'
+import { A, Lightbox, useCopy, usePageMeta } from './ui'
 
 const useQuery = () => {
   const read = () => Object.fromEntries(new URLSearchParams(window.location.search))
@@ -17,47 +18,7 @@ const useQuery = () => {
   return query
 }
 
-export const About = () => {
-  const { pack } = useCopy()
-  usePageMeta(`${pack.about.title} — The Brotherhood`, pack.about.lead, '/about')
-  useReveal(pack.about.title)
-  return (
-    <article>
-      <header className="page-hero">
-        <img src="/media/circle-clap.jpg" alt="" />
-        <div className="container page-hero-copy">
-          <p className="kicker">{pack.about.kicker}</p>
-          <h1 className="page-title">{pack.about.title}</h1>
-          <p className="lead">{pack.about.lead}</p>
-        </div>
-      </header>
-      <section className="section is-light">
-        <div className="container about-grid">
-          <figure className="about-still" data-reveal>
-            <img src="/media/clinic-group.jpg" alt={pack.about.title} />
-          </figure>
-          <div>
-            {pack.about.blocks.map((block, index) => (
-              <article className="approach-item" key={block.title} data-reveal style={{ '--d': index % 3 }}>
-                <h2>{block.title}</h2>
-                <p>{block.text}</p>
-              </article>
-            ))}
-            <div className="hero-actions" data-reveal>
-              <A className="btn btn-primary" href="/missions">
-                <span>{pack.home.primary}</span>
-                <ArrowIcon />
-              </A>
-              <A className="btn btn-ghost" href="/join">
-                {pack.home.join}
-              </A>
-            </div>
-          </div>
-        </div>
-      </section>
-    </article>
-  )
-}
+export { About } from './About'
 
 export const Archive = ({ kind }) => {
   const { pack, locale } = useCopy()
@@ -191,6 +152,9 @@ export const StoryPage = ({ slug }) => {
   }
 
   const shareUrl = typeof window !== 'undefined' ? window.location.href : storyPath(story)
+  const coverIsFirst = story.images.length > 1 && story.images[0]?.src === story.cover
+  const plates = coverIsFirst ? story.images.slice(1) : story.images
+  const plateOffset = coverIsFirst ? 1 : 0
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
@@ -219,66 +183,61 @@ export const StoryPage = ({ slug }) => {
           </A>
         </div>
       </header>
-      <section className="section is-light">
-        <div className="container prose" data-reveal>
-          {story.body.map((paragraph) => (
-            <p key={paragraph.slice(0, 24)}>{paragraph}</p>
-          ))}
-        </div>
-      </section>
-      <section className="section">
-        <div className="container">
-          <h2 className="h2" data-reveal>
-            {pack.story.gallery}
-          </h2>
-          <div className="gallery">
-            {story.images.map((image, index) => (
-              <button key={image.src} type="button" className={index === 0 ? 'is-lead' : ''} onClick={() => setLight(index)} aria-label={image.alt || pack.story.open} data-reveal style={{ '--d': index % 4 }}>
+      <section className="story-spread is-light">
+        <div className="container story-spread-grid">
+          <div className="story-essay" data-reveal>
+            {story.body.map((paragraph) => (
+              <p key={paragraph.slice(0, 32)}>{paragraph}</p>
+            ))}
+            <div className="share">
+              <span>{pack.story.share}</span>
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">
+                Facebook
+              </a>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`${story.title} ${shareUrl}`)}`} target="_blank" rel="noopener noreferrer">
+                WhatsApp
+              </a>
+              <button type="button" onClick={copyLink}>
+                {copied ? pack.story.copied : pack.story.copy}
+              </button>
+            </div>
+          </div>
+          <div className="story-plates">
+            {plates.map((image, index) => (
+              <button key={image.src} type="button" className="story-plate" onClick={() => setLight(plateOffset + index)} aria-label={image.alt || pack.story.open} data-reveal style={{ '--d': index % 3 }}>
                 <img src={image.src} alt={image.alt || ''} />
+                {image.caption || image.alt ? (
+                  <span>
+                    {image.caption ? <small>{String(index + 1).padStart(2, '0')}</small> : null}
+                    {image.caption || image.alt}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
-          <div className="prose">
-            {story.images.filter((image) => image.caption).map((image) => (
-              <p key={`${image.src}-cap`}>
-                <strong>{image.alt}. </strong>
-                {image.caption}
-              </p>
-            ))}
-          </div>
-          <div className="share">
-            <span>{pack.story.share}</span>
-            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">
-              Facebook
-            </a>
-            <a href={`https://wa.me/?text=${encodeURIComponent(`${story.title} ${shareUrl}`)}`} target="_blank" rel="noopener noreferrer">
-              WhatsApp
-            </a>
-            <button type="button" onClick={copyLink}>
-              {copied ? pack.story.copied : pack.story.copy}
-            </button>
-          </div>
-          {data.related?.length ? (
-            <>
-              <h2 className="h2" style={{ marginTop: 72 }} data-reveal>
-                {pack.story.related}
-              </h2>
-              <div className="trio">
-                {data.related.map((item) => (
-                  <A className="shot is-portrait" key={item.slug} href={storyPath(item)} data-reveal>
-                    <figure>
-                      <img src={item.cover} alt="" />
-                      <figcaption>
-                        <strong>{item.title}</strong>
-                      </figcaption>
-                    </figure>
-                  </A>
-                ))}
-              </div>
-            </>
-          ) : null}
         </div>
       </section>
+      {data.related?.length ? (
+        <section className="section">
+          <div className="container">
+            <h2 className="h2" data-reveal>
+              {pack.story.related}
+            </h2>
+            <div className="trio">
+              {data.related.map((item) => (
+                <A className="shot is-land" key={item.slug} href={storyPath(item)} data-reveal>
+                  <figure>
+                    <img src={item.cover} alt="" />
+                    <figcaption>
+                      <strong>{item.title}</strong>
+                    </figcaption>
+                  </figure>
+                </A>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
       {light >= 0 ? <Lightbox images={story.images} index={light} onClose={() => setLight(-1)} onIndex={setLight} labels={pack.story} /> : null}
     </article>
   )
@@ -299,18 +258,49 @@ export const Creative = () => {
   )
 }
 
+const CHANNELS = [
+  { key: 'instagram', name: 'Instagram', image: '/media/enlightened-wide.jpg' },
+  { key: 'facebook', name: 'Facebook', image: '/media/boys-banners.jpg' },
+  { key: 'tiktok', name: 'TikTok', image: '/media/safi-heart.jpg' },
+]
+
 export const SocialPage = () => {
   const { pack } = useCopy()
   usePageMeta(`${pack.social.title} — The Brotherhood`, pack.social.lead, '/social')
+  useReveal(pack.social.title)
   return (
-    <article className="section page-pad">
-      <div className="container">
-        <p className="kicker">{pack.social.kicker}</p>
-        <h1 className="page-title">{pack.social.title}</h1>
-        <p className="lead">{pack.social.lead}</p>
-        <div style={{ marginTop: 40 }}>
-          <SocialRow pack={pack.social} />
+    <article>
+      <header className="page-hero">
+        <img src="/media/polo.jpg" alt="" />
+        <div className="container page-hero-copy">
+          <p className="kicker">{pack.social.kicker}</p>
+          <h1 className="page-title">{pack.social.title}</h1>
+          <p className="lead">{pack.social.lead}</p>
         </div>
+      </header>
+      <div className="channels">
+        {CHANNELS.map((channel) => {
+          const url = SOCIAL_LINKS.find((item) => item.key === channel.key)?.url
+          return (
+            <article className="channel" key={channel.key}>
+              <figure>
+                <img src={channel.image} alt="" />
+              </figure>
+              <div className="channel-copy" data-reveal>
+                <h2>{channel.name}</h2>
+                <p>{pack.social[channel.key]}</p>
+                {url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    {pack.social.visit}
+                    <ArrowIcon />
+                  </a>
+                ) : (
+                  <em>{pack.social.missing}</em>
+                )}
+              </div>
+            </article>
+          )
+        })}
       </div>
     </article>
   )
