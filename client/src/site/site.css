@@ -2351,6 +2351,7 @@ html[lang='ar'] .mission-title {
 }
 
 .photo-pick {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -2359,6 +2360,7 @@ html[lang='ar'] .mission-title {
   border: 1px dashed rgba(255, 255, 255, 0.22);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
   transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
 }
 
@@ -2411,18 +2413,21 @@ html[lang='ar'] .mission-title {
   cursor: pointer;
 }
 
-.bh-field .photo-pick-add input {
+.bh-field .photo-pick-input {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-.bh-field .photo-pick-add:focus-within {
-  outline: 2px solid #ff2948;
-  outline-offset: 3px;
-  border-radius: 4px;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .photo-pick-copy small {
@@ -2431,6 +2436,8 @@ html[lang='ar'] .mission-title {
 }
 
 .photo-pick-remove {
+  position: relative;
+  z-index: 3;
   padding: 0;
   border: 0;
   background: none;

@@ -313,6 +313,7 @@ export const Join = () => {
           <div className="bh-field is-wide">
             <p className="gender-legend" id="photo-label">{copy.fields.photo}</p>
             <div className={`photo-pick${portrait ? ' has-photo' : ''}`}>
+              <input id="profile-photo" className="photo-pick-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} aria-labelledby="photo-label" />
               <span className="photo-pick-frame" aria-hidden="true">
                 {portrait ? <img src={portrait.url} alt="" /> : (
                   <svg viewBox="0 0 24 24" width="28" height="28">
@@ -322,10 +323,7 @@ export const Join = () => {
                 )}
               </span>
               <span className="photo-pick-copy">
-                <label className="photo-pick-add">
-                  {portrait ? copy.photoReplace : copy.photoAdd}
-                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} aria-labelledby="photo-label" />
-                </label>
+                <span className="photo-pick-add">{portrait ? copy.photoReplace : copy.photoAdd}</span>
                 <small>{copy.photoHint}</small>
                 {portrait ? (
                   <button type="button" className="photo-pick-remove" onClick={clearPhoto}>{copy.photoRemove}</button>
