@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.local
+.env.*.local
+.keys.json
+**/.keys.json
+*.pem
+dist
+uploads
+*.log
+.DS_Store
+.cache
+server/.cache

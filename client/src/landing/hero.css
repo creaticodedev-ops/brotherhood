@@ -1,0 +1,411 @@
+/* ───────────────────────── Hero — immersive market scene ───────────────────────── */
+
+.hero {
+  position: relative;
+  background: var(--black);
+}
+
+.hero-stage {
+  --p: 0;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding-block: calc(var(--nav-h) + 40px) 28px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: fade 1.4s var(--ease) both;
+}
+
+/* Legibility layers: a text-side vignette that dissolves as the scene takes over. */
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.hero-shade::before,
+.hero-shade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.hero-shade::before {
+  background: linear-gradient(
+    180deg,
+    rgba(5, 6, 5, 0.35) 0%,
+    rgba(5, 6, 5, 0.6) 40%,
+    rgba(5, 6, 5, 0.3) 75%,
+    rgba(5, 6, 5, 0.1) 100%
+  );
+}
+
+.hero-shade::after {
+  background: linear-gradient(180deg, rgba(5, 6, 5, 0.75) 0%, transparent 20%, transparent 78%, var(--black) 100%);
+}
+
+/* Corner brackets — an instrument frame around the scene. */
+.hero-frame {
+  display: none;
+}
+
+.hero-frame i {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid rgba(255, 255, 255, 0.2);
+}
+
+.hero-frame i:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+}
+
+.hero-frame i:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-width: 1px 1px 0 0;
+}
+
+.hero-frame i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1px 1px;
+}
+
+.hero-frame i:nth-child(4) {
+  right: 0;
+  bottom: 0;
+  border-width: 0 1px 1px 0;
+}
+
+/* HUD */
+.hero-hud {
+  display: none;
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(5, 6, 5, 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.hero-chip i {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--green-bright);
+  border-radius: 50%;
+}
+
+.hero-clocks {
+  display: flex;
+  gap: 28px;
+}
+
+.hero-clocks li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.hero-clocks time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+/* Content */
+.hero-content {
+  position: relative;
+  margin-block: auto;
+  padding-block: 24px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  animation: rise 0.9s var(--ease) 0.15s both;
+}
+
+html[lang='ar'] .hero-eyebrow {
+  letter-spacing: 0;
+  font-size: 0.875rem;
+  text-transform: none;
+}
+
+.hero-eyebrow i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-bright);
+  box-shadow: 0 0 0 4px rgba(34, 181, 115, 0.16);
+}
+
+.hero-title {
+  max-width: 15ch;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 1.1rem + 5.6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+html[lang='ar'] .hero-title {
+  max-width: 17ch;
+  font-size: clamp(2.25rem, 1.1rem + 4.6vw, 4.5rem);
+  line-height: 1.25;
+}
+
+.hero-line {
+  display: block;
+  animation: rise 1s var(--ease) 0.3s both;
+}
+
+.hero-line.is-soft {
+  color: rgba(255, 255, 255, 0.5);
+  animation-delay: 0.45s;
+}
+
+.hero-lead {
+  max-width: 54ch;
+  margin-top: 28px;
+  color: var(--text-muted);
+  font-size: clamp(1rem, 0.94rem + 0.35vw, 1.1875rem);
+  line-height: 1.65;
+  animation: rise 0.9s var(--ease) 0.6s both;
+}
+
+.hero .hero-actions {
+  animation: rise 0.9s var(--ease) 0.75s both;
+}
+
+/* Closing statement — only shown when the hero is pinned. */
+.hero-statement {
+  display: none;
+}
+
+/* Rail */
+.hero-rail {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+.hero-pillars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  animation: fade 1s var(--ease) 1s both;
+}
+
+.hero-pillars li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-pillars li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green-bright);
+}
+
+.hero-scroll {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  color: var(--text-dim);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: color 0.25s var(--ease);
+  animation: fade 1s var(--ease) 1.4s both;
+}
+
+.hero-scroll:hover {
+  color: var(--text-muted);
+}
+
+[dir='rtl'] .hero-scroll {
+  letter-spacing: 0;
+}
+
+.hero-scroll i {
+  position: relative;
+  width: 1px;
+  height: 40px;
+  overflow: hidden;
+  background: var(--line-strong);
+}
+
+.hero-scroll i::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: -40%;
+  height: 40%;
+  background: var(--green-bright);
+  animation: scroll-hint 2.4s var(--ease-in-out) infinite;
+}
+
+@keyframes scroll-hint {
+  to {
+    top: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-shade::before {
+    background: linear-gradient(90deg, rgba(5, 6, 5, 0.82) 0%, rgba(5, 6, 5, 0.5) 34%, rgba(5, 6, 5, 0) 62%);
+  }
+
+  [dir='rtl'] .hero-shade::before {
+    background: linear-gradient(270deg, rgba(5, 6, 5, 0.82) 0%, rgba(5, 6, 5, 0.5) 34%, rgba(5, 6, 5, 0) 62%);
+  }
+
+  .hero-scroll {
+    display: flex;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-stage {
+    padding-block: calc(var(--nav-h) + 72px) 32px;
+  }
+
+  .hero-frame {
+    position: absolute;
+    inset: calc(var(--nav-h) + 14px) max(16px, calc(var(--gutter) / 2)) 16px;
+    z-index: -1;
+    display: block;
+    pointer-events: none;
+    animation: fade 1.2s var(--ease) 1.4s both;
+  }
+
+  .hero-hud {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(var(--nav-h) + 28px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-dim);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    animation: fade 1s var(--ease) 1.2s both;
+  }
+
+  html[lang='ar'] .hero-hud {
+    font-size: 0.8125rem;
+    letter-spacing: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll i::after {
+    display: none;
+  }
+}
+
+/* Pinned, scroll-driven composition */
+@supports (overflow: clip) {
+  @media (min-width: 768px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+    .hero {
+      height: 170vh;
+      height: 170svh;
+    }
+
+    .hero-stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+    }
+
+    .hero-title {
+      font-size: min(clamp(2.5rem, 1.1rem + 5.6vw, 5.5rem), 9.5vh);
+    }
+
+    html[lang='ar'] .hero-title {
+      font-size: min(clamp(2.25rem, 1.1rem + 4.6vw, 4.5rem), 8vh);
+    }
+
+    .hero-shade::before {
+      opacity: calc(1 - var(--p) * 0.85);
+    }
+
+    .hero-content {
+      opacity: clamp(0, calc((0.55 - var(--p)) / 0.4), 1);
+      transform: translate3d(0, calc(var(--p) * -60px), 0);
+      will-change: opacity, transform;
+    }
+
+    .hero-rail {
+      opacity: clamp(0, calc((0.4 - var(--p)) / 0.3), 1);
+    }
+
+    .hero-statement {
+      position: absolute;
+      inset-inline-end: var(--gutter);
+      bottom: 16%;
+      display: block;
+      max-width: 15ch;
+      color: var(--white);
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 0.9rem + 2.6vw, 3.5rem);
+      font-weight: 600;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      text-align: end;
+      text-wrap: balance;
+      opacity: clamp(0, calc((var(--p) - 0.5) / 0.3), 1);
+      transform: translate3d(0, calc((1 - var(--p)) * 48px), 0);
+      pointer-events: none;
+    }
+
+    html[lang='ar'] .hero-statement {
+      font-family: var(--font-arabic);
+      letter-spacing: 0;
+      line-height: 1.35;
+    }
+  }
+}

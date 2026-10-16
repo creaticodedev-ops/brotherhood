@@ -1,0 +1,32 @@
+{
+  "name": "udbonds-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "brand:assets": "node scripts/generate-brand-assets.mjs"
+  },
+  "dependencies": {
+    "country-flag-icons": "^1.6.20",
+    "libphonenumber-js": "^1.13.14",
+    "lightweight-charts": "^5.2.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "sharp": "^0.35.3",
+    "vite": "^6.3.5"
+  }
+}
