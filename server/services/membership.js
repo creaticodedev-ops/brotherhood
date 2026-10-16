@@ -35,6 +35,7 @@ export const validateMembership = (body = {}, phone) => {
   const squads = Array.isArray(body.squads) ? [...new Set(body.squads.map((item) => text(item, 20)).filter(Boolean))] : []
   const data = {
     kind: 'membership',
+    status: 'new',
     offer: 'membership',
     duration: 'join',
     amount: 0,

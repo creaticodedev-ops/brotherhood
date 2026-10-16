@@ -420,6 +420,71 @@ export const relatedStories = (list, story, count = 3) =>
     .sort((a, b) => Number(b.category === story.category) - Number(a.category === story.category) || a.sort - b.sort)
     .slice(0, count)
 
+/** Curated chapters. Each frame is a photograph that already belongs to a story. */
+export const CHAPTERS = [
+  {
+    id: 'montagne',
+    story: 'qafalat-al-dafa',
+    layout: 'cinema',
+    images: ['warmth-group', 'truck-unload', 'blankets', 'tent-frame'],
+  },
+  {
+    id: 'table',
+    story: 'distributions-alimentaires',
+    layout: 'split',
+    images: ['iftar-120', 'night-meal', 'flour-bags', 'tent-meal'],
+  },
+  {
+    id: 'ville',
+    story: 'presences-en-ville',
+    layout: 'walk',
+    images: ['sheep-street', 'neighborhood', 'sheep-walk'],
+  },
+  {
+    id: 'portraits',
+    story: 'portraits-de-groupe',
+    layout: 'portraits',
+    images: ['night-gathering', 'clinic-group', 'sports-team', 'circle-clap'],
+  },
+  {
+    id: 'soirees',
+    story: 'feu-de-plage',
+    layout: 'night',
+    evenings: true,
+    images: ['beach-fire', 'pool-night', 'lantern-circle', 'screening'],
+  },
+  {
+    id: 'signe',
+    story: 'safi-vu-d-en-haut',
+    layout: 'sign',
+    images: ['safi-heart', 'enlightened-words', 'polo', 'boys-banners'],
+  },
+]
+
+export const resolveChapters = (stories) => {
+  const published = stories.filter((story) => story.published !== false)
+  const find = (file) => {
+    for (const story of published) {
+      const image = (story.images || []).find((item) => item.src.includes(`/${file}.`))
+      if (!image) continue
+      return { ...image, href: storyPath(story), title: story.title, slug: story.slug }
+    }
+    return null
+  }
+  return CHAPTERS.map((chapter) => {
+    const story = published.find((item) => item.slug === chapter.story)
+    const frames = chapter.images.map(find).filter(Boolean)
+    if (!story || frames.length < 2) return null
+    return {
+      ...chapter,
+      title: story.title,
+      summary: story.summary,
+      href: storyPath(story),
+      frames,
+    }
+  }).filter(Boolean)
+}
+
 export const creativeFrames = (list) =>
   list
     .filter((story) => story.published !== false)

@@ -112,8 +112,22 @@ export const COPY = {
     creative: {
       kicker: 'Univers créatif',
       title: 'Ce que Brotherhood choisit de montrer.',
-      lead: 'Photographies de missions, de soirées et d’installations. Ouvrez une image, puis le récit auquel elle appartient.',
+      lead: 'Six chapitres, tirés des récits déjà publiés. Chaque image ouvre le sien.',
       empty: 'La galerie est vide pour le moment.',
+      index: 'Chapitres',
+      all: 'Tout le fil',
+      evenings: 'Les soirées',
+      read: 'Lire le récit',
+      loading: 'Ouverture des chapitres…',
+      labels: {
+        portraits: 'Les portraits',
+        soirees: 'Les soirées',
+      },
+      notes: {
+        portraits: 'Quatre photographies déjà publiées : la banderole de nuit, le groupe en intérieur, la photo d’équipe, le cercle d’applaudissements.',
+        soirees: 'Quatre veillées déjà publiées, chacune avec son récit : le feu sur la plage, la nuit au bord de l’eau, le cercle de lanternes, la projection en plein air.',
+        signe: 'Le cœur et le mot SAFI, le tableau Enlightened Mentality, et les banderoles du groupe.',
+      },
     },
     social: {
       kicker: 'Réseaux',
@@ -322,8 +336,22 @@ export const COPY = {
     creative: {
       kicker: 'Creative world',
       title: 'What Brotherhood chooses to show.',
-      lead: 'Photographs from missions, evenings and installations. Open an image, then the story it belongs to.',
+      lead: 'Six chapters, drawn from stories already published. Each photograph opens its own.',
       empty: 'The gallery is empty for now.',
+      index: 'Chapters',
+      all: 'The full reel',
+      evenings: 'Evenings',
+      read: 'Read the story',
+      loading: 'Opening the chapters…',
+      labels: {
+        portraits: 'Portraits',
+        soirees: 'Evenings',
+      },
+      notes: {
+        portraits: 'Four photographs already published: the night banner, the indoor group, the team picture, the applause circle.',
+        soirees: 'Four evenings already published, each with its own story: the beach fire, the night by the water, the lantern circle, the outdoor screening.',
+        signe: 'The SAFI heart, the Enlightened Mentality board, and the group’s banners.',
+      },
     },
     social: {
       kicker: 'Social',
@@ -532,8 +560,22 @@ export const COPY = {
     creative: {
       kicker: 'العالم الإبداعي',
       title: 'ما تختار Brotherhood أن تُظهره.',
-      lead: 'صور من المهام والسهرات والتجهيزات. افتح صورة، ثم القصة التي تنتمي إليها.',
+      lead: 'ستة فصول من القصص المنشورة. كل صورة تفتح قصتها.',
       empty: 'المعرض فارغ حاليًا.',
+      index: 'فصول',
+      all: 'الشريط كاملًا',
+      evenings: 'السهرات',
+      read: 'اقرأ القصة',
+      loading: 'تُفتح الفصول…',
+      labels: {
+        portraits: 'البورتريهات',
+        soirees: 'السهرات',
+      },
+      notes: {
+        portraits: 'أربع صور منشورة: لافتة الليل، المجموعة في الداخل، صورة الفريق، وحلقة التصفيق.',
+        soirees: 'أربع سهرات منشورة، ولكل واحدة قصتها: نار الشاطئ، الليلة قرب الماء، حلقة الفوانيس، والعرض في الهواء الطلق.',
+        signe: 'قلب SAFI، لوحة Enlightened Mentality، ورايات المجموعة.',
+      },
     },
     social: {
       kicker: 'الشبكات',

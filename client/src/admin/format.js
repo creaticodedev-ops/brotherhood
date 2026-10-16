@@ -9,6 +9,10 @@ const memo = (key, create) => {
 /** Wrapped in a first-strong isolate so amounts keep their order inside Arabic sentences. */
 export const formatMoney = (value, locale, currency = 'USD', compact = false) => {
   if (!Number.isFinite(value)) return '—'
+  if (!/^[A-Z]{3}$/.test(currency || '')) {
+    const plain = memo(`n|${locale}|${compact}`, () => new Intl.NumberFormat(numberLocale(locale), compact ? { notation: 'compact', maximumFractionDigits: 1 } : { maximumFractionDigits: 2 })).format(value)
+    return `\u2068${plain}\u2069`
+  }
   const options = compact
     ? { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }
     : { style: 'currency', currency, maximumFractionDigits: value % 1 ? 2 : 0 }

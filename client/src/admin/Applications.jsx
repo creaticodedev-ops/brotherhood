@@ -86,7 +86,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
       try {
         const { item: updated } = await adminApi.setStatus(item.id, next)
         setData((prev) => prev && { ...prev, items: prev.items.map((row) => (row.id === updated.id ? updated : row)) })
-        if (next === 'approved' && updated.phone && !openWhatsApp(updated.phone, confirmationMessage(updated))) onOpen(updated.id)
+        if ((next === 'approved' || next === 'accepted') && updated.phone && !openWhatsApp(updated.phone, confirmationMessage(updated))) onOpen(updated.id)
         onChanged()
       } catch {
         setAttempt((n) => n + 1)
@@ -244,10 +244,10 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                     {item.city}
                   </td>
                   <td data-label={a('table.amount')} className="is-num adm-amount" dir="ltr">
-                    {formatMoney(item.amount, locale, item.currency)}
+                    {item.kind === 'membership' ? (item.squads || []).join(' · ') || '—' : formatMoney(item.amount, locale, item.currency)}
                   </td>
-                  <td data-label={a('table.duration')}>{t(`register.durations.${item.duration}`)}</td>
-                  <td data-label={a('table.offer')}>{t(`offers.items.${item.offer}.name`)}</td>
+                  <td data-label={a('table.duration')}>{item.kind === 'membership' ? item.age ?? '—' : t(`register.durations.${item.duration}`)}</td>
+                  <td data-label={a('table.offer')}>{item.kind === 'membership' ? a('overview.membership') : t(`offers.items.${item.offer}.name`)}</td>
                   <td data-label={a('table.date')} className="adm-date">
                     {formatDateTime(item.createdAt, locale)}
                   </td>
@@ -255,15 +255,15 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                     <StatusPill status={item.status} />
                   </td>
                   <td className="is-actions" onClick={(event) => event.stopPropagation()}>
-                    {item.status === 'pending' ? (
+                    {item.status === 'pending' || item.status === 'new' ? (
                       <span className="adm-quick">
                         <button
                           type="button"
                           className="adm-quick-btn is-approve"
                           disabled={Boolean(busy[item.id])}
-                          onClick={() => changeStatus(item, 'approved')}
-                          aria-label={`${a('actions.approved')} — ${fullName(item)}`}
-                          title={a('actions.approved')}
+                          onClick={() => changeStatus(item, item.kind === 'membership' ? 'accepted' : 'approved')}
+                          aria-label={`${a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')} — ${fullName(item)}`}
+                          title={a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')}
                         >
                           <CheckIcon />
                         </button>

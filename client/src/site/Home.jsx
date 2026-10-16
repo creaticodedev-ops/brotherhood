@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePinnedProgress, useReveal } from '../landing/hooks'
 import { ArrowIcon, SectionIntro } from '../landing/ui'
-import { loadCreative, loadStories } from './api'
+import { resolveChapters } from '../../../shared/catalog.js'
+import { loadStories } from './api'
 import { A, Shot, SocialRow, useCopy, usePageMeta } from './ui'
 
 export const Home = () => {
@@ -10,19 +11,19 @@ export const Home = () => {
   const [progress, setProgress] = useState(0)
   const [missions, setMissions] = useState([])
   const [activities, setActivities] = useState([])
-  const [frames, setFrames] = useState([])
+  const [chapters, setChapters] = useState([])
   usePageMeta(pack.meta.title, pack.meta.description, '/')
   usePinnedProgress(heroRef, setProgress)
-  useReveal(`${locale}:${missions.length}:${activities.length}:${frames.length}`)
+  useReveal(`${locale}:${missions.length}:${activities.length}:${chapters.length}`)
 
   useEffect(() => {
     let live = true
-    Promise.all([loadStories({ kind: 'mission', featured: '1', limit: 3 }), loadStories({ kind: 'activity', limit: 3 }), loadCreative()]).then(
-      ([missionData, activityData, creative]) => {
+    Promise.all([loadStories({ kind: 'mission', featured: '1', limit: 3 }), loadStories({ kind: 'activity', limit: 3 }), loadStories({ limit: 60 })]).then(
+      ([missionData, activityData, archive]) => {
         if (!live) return
         setMissions(missionData.items)
         setActivities(activityData.items)
-        setFrames(creative.frames.slice(0, 7))
+        setChapters(resolveChapters(archive.items).slice(0, 3))
       },
     )
     return () => {
@@ -130,11 +131,16 @@ export const Home = () => {
               <ArrowIcon />
             </A>
           </div>
-          <div className="film">
-            {frames.map((frame, index) => (
-              <A key={`${frame.src}-${index}`} className={`film-frame${frame.wide ? ' is-wide' : ''}`} href={frame.href} data-reveal style={{ '--d': index % 4 }}>
-                <img src={frame.src} alt={frame.alt || frame.title} />
-                <span>{frame.title}</span>
+          <div className="home-reel">
+            {chapters.map((chapter, index) => (
+              <A key={chapter.id} className="still is-home" href={`/creative#${chapter.id}`} data-reveal style={{ '--d': index }}>
+                <span className="still-media">
+                  <img src={chapter.frames[0].src} alt={chapter.frames[0].alt || chapter.title} />
+                </span>
+                <span className="still-cap">
+                  <small>{String(index + 1).padStart(2, '0')}</small>
+                  {pack.creative.labels?.[chapter.id] || chapter.title}
+                </span>
               </A>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import './admin.css'
-import { useCallback, useEffect, useState } from 'react'
+import { Component, useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi, UNAUTHORIZED_EVENT } from './api'
 import { Dashboard } from './Dashboard'
@@ -17,6 +17,28 @@ const useNoIndex = () => {
     document.head.append(meta)
     return () => meta.remove()
   }, [])
+}
+
+class AdminBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children
+    return (
+      <main className="adm-boot" style={{ padding: 32, alignContent: 'start' }}>
+        <p style={{ color: '#fff', maxWidth: 720 }}>
+          {this.state.error.message}
+        </p>
+      </main>
+    )
+  }
 }
 
 /** Session gate: checks the httpOnly admin cookie, then shows the login screen or the dashboard. */
@@ -80,10 +102,14 @@ export const AdminApp = () => {
     )
   }
 
-  return session.state === 'in' ? (
-    <Dashboard onLogout={logout} />
-  ) : (
-    <Login key={loginMode} configured={session.configured} initialMode={loginMode} onSuccess={() => setSession({ state: 'in', configured: true })} />
+  return (
+    <AdminBoundary>
+      {session.state === 'in' ? (
+        <Dashboard onLogout={logout} />
+      ) : (
+        <Login key={loginMode} configured={session.configured} initialMode={loginMode} onSuccess={() => setSession({ state: 'in', configured: true })} />
+      )}
+    </AdminBoundary>
   )
 }
 

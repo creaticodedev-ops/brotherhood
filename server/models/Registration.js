@@ -3,14 +3,17 @@ import mongoose from 'mongoose'
 export const OFFER_IDS = ['essential', 'advanced', 'premium', 'membership']
 export const DURATIONS = ['15d', '1m', 'join']
 export const KINDS = ['legacy', 'membership']
-export const STATUSES = ['pending', 'approved', 'rejected', 'active', 'completed']
+export const STATUSES = ['new', 'pending', 'review', 'accepted', 'rejected', 'approved', 'active', 'completed']
 
 /** Status changes the admin may apply from a given status. */
 export const TRANSITIONS = {
-  pending: ['approved', 'rejected'],
-  approved: ['active', 'rejected', 'pending'],
-  rejected: ['pending'],
-  active: ['completed'],
+  new: ['pending', 'review', 'accepted', 'rejected'],
+  pending: ['review', 'accepted', 'rejected', 'approved'],
+  review: ['pending', 'accepted', 'rejected'],
+  accepted: ['rejected', 'pending'],
+  rejected: ['pending', 'review'],
+  approved: ['accepted', 'active', 'rejected', 'pending'],
+  active: ['completed', 'accepted'],
   completed: ['active'],
 }
 

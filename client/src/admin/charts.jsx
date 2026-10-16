@@ -128,7 +128,7 @@ export const StatusBreakdown = ({ stats, locale }) => {
       <div className="adm-stack" aria-hidden="true">
         {total ? (
           STATUS_ORDER.map((status) =>
-            stats.statuses[status].count ? (
+            stats.statuses[status]?.count ? (
               <i key={status} className={`is-${status}`} style={{ flexGrow: stats.statuses[status].count }} />
             ) : null,
           )
@@ -138,14 +138,11 @@ export const StatusBreakdown = ({ stats, locale }) => {
       </div>
       <ul className="adm-legend">
         {STATUS_ORDER.map((status) => {
-          const { count, amount } = stats.statuses[status]
+          const { count } = stats.statuses[status] || { count: 0 }
           return (
             <li key={status}>
               <span className={`adm-legend-dot is-${status}`} aria-hidden="true" />
               <span className="adm-legend-name">{a(`statuses.${status}`)}</span>
-              <span className="adm-legend-amount" dir="ltr">
-                {formatMoney(amount, locale, 'USD', true)}
-              </span>
               <span className="adm-legend-count">{formatCount(count, locale)}</span>
               <span className="adm-legend-share">{formatShare(total ? count / total : 0, locale)}</span>
             </li>

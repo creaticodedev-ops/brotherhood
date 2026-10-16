@@ -3,27 +3,52 @@ import { useEffect, useRef, useState } from 'react'
 export const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Adds `.is-in` to every `[data-reveal]` element once it enters the viewport. Re-scans when `rescanKey` changes. */
+/** Adds `.is-in` to every `[data-reveal]` element once it enters the viewport. Re-scans when `rescanKey` changes and when later content is added. */
 export const useReveal = (rescanKey) => {
   useEffect(() => {
-    const elements = [...document.querySelectorAll('[data-reveal]:not(.is-in)')]
-    if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
-      elements.forEach((el) => el.classList.add('is-in'))
-      return undefined
+    let observer = null
+    let frame = 0
+
+    const scan = () => {
+      const elements = [...document.querySelectorAll('[data-reveal]:not(.is-in)')]
+      if (!elements.length) return
+      if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
+        elements.forEach((el) => el.classList.add('is-in'))
+        return
+      }
+      document.documentElement.classList.add('has-reveal')
+      if (!observer) {
+        observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return
+              entry.target.classList.add('is-in')
+              observer.unobserve(entry.target)
+            })
+          },
+          { rootMargin: '0px 0px -10% 0px', threshold: 0.01 },
+        )
+      }
+      elements.forEach((el) => observer.observe(el))
     }
-    document.documentElement.classList.add('has-reveal')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          entry.target.classList.add('is-in')
-          observer.unobserve(entry.target)
-        })
-      },
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
-    )
-    elements.forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
+
+    const schedule = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        scan()
+      })
+    }
+
+    scan()
+    const mutations = new MutationObserver(schedule)
+    if (document.body) mutations.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      mutations.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+      observer?.disconnect()
+    }
   }, [rescanKey])
 }
 

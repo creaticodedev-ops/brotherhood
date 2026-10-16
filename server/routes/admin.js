@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { dbState } from '../configs/db.js'
 import { Notification, toNotification } from '../models/Notification.js'
 import { DURATIONS, OFFER_IDS, Registration, STATUSES, TRANSITIONS, toApplication } from '../models/Registration.js'
+import { Story } from '../models/Story.js'
 import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import {
@@ -300,7 +301,7 @@ adminRouter.get('/stats', async (req, res, next) => {
   try {
     const tz = timeZone(req.query.tz)
     const since = new Date(Date.now() - (DAILY_DAYS + 1) * 86_400_000)
-    const [byStatus, byOffer, byDuration, daily, latest] = await Promise.all([
+    const [byStatus, byOffer, byDuration, daily, latest, publishedStories, publishedMissions] = await Promise.all([
       Registration.aggregate([{ $group: { _id: '$status', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
       Registration.aggregate([{ $group: { _id: '$offer', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
       Registration.aggregate([{ $group: { _id: '$duration', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
@@ -316,6 +317,8 @@ adminRouter.get('/stats', async (req, res, next) => {
         { $sort: { _id: 1 } },
       ]),
       Registration.find().sort({ createdAt: -1 }).limit(6).lean(),
+      Story.countDocuments({ published: true }),
+      Story.countDocuments({ published: true, kind: 'mission' }),
     ])
     const group = (rows, keys) =>
       Object.fromEntries(
@@ -335,6 +338,7 @@ adminRouter.get('/stats', async (req, res, next) => {
       days: DAILY_DAYS,
       timeZone: tz,
       latest: latest.map(toApplication),
+      archive: { published: publishedStories, missions: publishedMissions },
       generatedAt: Date.now(),
     })
   } catch (error) {

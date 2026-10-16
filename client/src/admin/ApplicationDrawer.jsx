@@ -8,7 +8,16 @@ import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
 import { confirmationMessage, messageLocale, openWhatsApp, whatsappUrl } from './whatsapp'
 
-const ACTION_STYLE = { approved: 'btn-primary', active: 'btn-primary', completed: 'btn-primary', rejected: 'adm-btn-danger', pending: 'btn-ghost' }
+const ACTION_STYLE = {
+  new: 'btn-ghost',
+  pending: 'btn-ghost',
+  review: 'btn-ghost',
+  accepted: 'btn-primary',
+  approved: 'btn-primary',
+  active: 'btn-primary',
+  completed: 'btn-primary',
+  rejected: 'adm-btn-danger',
+}
 
 const MembershipFile = ({ item, onChanged }) => {
   const [notes, setNotes] = useState(item.notes || '')
@@ -215,7 +224,7 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
       const data = await adminApi.setStatus(id, status)
       setState({ id, item: data.item, transitions: data.transitions, error: null })
       // Still inside the click's user activation, so the browser lets the new tab open.
-      if (status === 'approved' && data.item.phone) setWaNotice(openWhatsApp(data.item.phone, confirmationMessage(data.item)) ? 'opened' : 'blocked')
+      if ((status === 'approved' || status === 'accepted') && data.item.phone) setWaNotice(openWhatsApp(data.item.phone, confirmationMessage(data.item)) ? 'opened' : 'blocked')
       else setWaNotice('')
       onChanged()
     } catch (err) {

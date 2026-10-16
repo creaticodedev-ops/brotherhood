@@ -43,15 +43,18 @@ const OverviewSkeleton = () => (
 
 export const Overview = ({ stats, error, onRetry, onOpen, onViewAll }) => {
   const a = useAdminText()
-  const { t, locale } = useI18n()
+  const { locale } = useI18n()
   const now = useNow()
 
   if (!stats) return error ? <ErrorState error={error} onRetry={onRetry} /> : <OverviewSkeleton />
 
   const { statuses, total } = stats
+  const countOf = (key) => statuses[key]?.count || 0
   const today = stats.daily.find((row) => row.day === dayKey(new Date()))?.count || 0
+  const incoming = countOf('new') + countOf('pending')
+  const reading = countOf('review')
+  const accepted = countOf('accepted') + countOf('approved')
   const share = (count) => a('overview.kpi.share', { pct: formatShare(total ? count / total : 0, locale) })
-  const requested = (amount) => a('overview.kpi.requested', { amount: formatMoney(amount, locale) })
 
   return (
     <div className="adm-view">
@@ -65,10 +68,10 @@ export const Overview = ({ stats, error, onRetry, onOpen, onViewAll }) => {
       </header>
 
       <div className="adm-kpis">
-        <Kpi index={0} locale={locale} label={a('overview.kpi.total')} value={total} foot={`${requested(stats.amount)} · ${a('overview.kpi.today', { n: formatCount(today, locale) })}`} />
-        <Kpi index={1} locale={locale} accent label={a('overview.kpi.pending')} value={statuses.pending.count} foot={share(statuses.pending.count)} />
-        <Kpi index={2} locale={locale} label={a('overview.kpi.active')} value={statuses.active.count} foot={requested(statuses.active.amount)} />
-        <Kpi index={3} locale={locale} label={a('overview.kpi.completed')} value={statuses.completed.count} foot={requested(statuses.completed.amount)} />
+        <Kpi index={0} locale={locale} label={a('overview.kpi.total')} value={total} foot={a('overview.kpi.today', { n: formatCount(today, locale) })} />
+        <Kpi index={1} locale={locale} accent label={a('overview.kpi.pending')} value={incoming} foot={share(incoming)} />
+        <Kpi index={2} locale={locale} label={a('overview.kpi.active')} value={reading} foot={share(reading)} />
+        <Kpi index={3} locale={locale} label={a('overview.kpi.completed')} value={accepted} foot={share(accepted)} />
       </div>
 
       <div className="adm-grid">
@@ -103,7 +106,7 @@ export const Overview = ({ stats, error, onRetry, onOpen, onViewAll }) => {
                       </span>
                     </span>
                     <span className="adm-recent-amount" dir="ltr">
-                      {formatMoney(item.amount, locale, item.currency)}
+                      {item.kind === 'membership' ? (item.squads || []).join(' · ') || '—' : formatMoney(item.amount, locale, item.currency)}
                     </span>
                     <StatusPill status={item.status} />
                     <ChevronIcon />
@@ -117,16 +120,26 @@ export const Overview = ({ stats, error, onRetry, onOpen, onViewAll }) => {
         </Panel>
 
         <div className="adm-stackcol">
-          <Panel title={a('overview.offers')}>
+          <Panel title={a('overview.archive')}>
             <BarList
               locale={locale}
-              rows={Object.entries(stats.offers).map(([key, row]) => ({ key, label: t(`offers.items.${key}.name`), ...row }))}
+              rows={[
+                { key: 'missions', label: a('overview.missions'), count: stats.archive?.missions || 0 },
+                { key: 'published', label: a('overview.archive'), count: stats.archive?.published || 0 },
+              ]}
             />
           </Panel>
-          <Panel title={a('overview.durations')}>
+          <Panel title={a('overview.membership')}>
             <BarList
               locale={locale}
-              rows={Object.entries(stats.durations).map(([key, row]) => ({ key, label: t(`register.durations.${key}`), ...row }))}
+              rows={[
+                { key: 'membership', label: a('overview.membership'), count: stats.offers.membership?.count || 0 },
+                {
+                  key: 'earlier',
+                  label: a('overview.earlier'),
+                  count: Math.max(0, total - (stats.offers.membership?.count || 0)),
+                },
+              ]}
             />
           </Panel>
         </div>

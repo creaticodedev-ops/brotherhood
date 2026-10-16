@@ -1473,10 +1473,16 @@ html[lang='ar'] .adm-panel-head h2 {
   background: currentColor;
 }
 
+.adm-pill.is-new,
 .adm-pill.is-pending {
   color: var(--white);
 }
 
+.adm-pill.is-review {
+  --tone: #e2b15a;
+}
+
+.adm-pill.is-accepted,
 .adm-pill.is-approved {
   --tone: var(--st-approved);
 }

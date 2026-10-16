@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { categoryLabel, storyPath } from '../../../shared/catalog.js'
 import { useReveal } from '../landing/hooks'
 import { ArrowIcon } from '../landing/ui'
-import { loadCreative, loadStories, loadStory } from './api'
+import { loadStories, loadStory } from './api'
+import { Gallery } from './Gallery'
 import { A, Lightbox, SocialRow, useCopy, usePageMeta } from './ui'
 
 const useQuery = () => {
@@ -285,34 +286,15 @@ export const StoryPage = ({ slug }) => {
 
 export const Creative = () => {
   const { pack } = useCopy()
-  const [frames, setFrames] = useState([])
-  const [light, setLight] = useState(-1)
   usePageMeta(`${pack.creative.title} — The Brotherhood`, pack.creative.lead, '/creative')
-  useReveal(frames.length)
-  useEffect(() => {
-    let live = true
-    loadCreative().then((data) => live && setFrames(data.frames))
-    return () => {
-      live = false
-    }
-  }, [])
   return (
-    <article className="section page-pad">
+    <article className="page-pad">
       <div className="container">
         <p className="kicker">{pack.creative.kicker}</p>
         <h1 className="page-title">{pack.creative.title}</h1>
         <p className="lead">{pack.creative.lead}</p>
-        {!frames.length ? <p className="fine-print">{pack.creative.empty}</p> : null}
-        <div className="film is-gallery">
-          {frames.map((frame, index) => (
-            <button key={`${frame.src}-${index}`} type="button" className={`film-frame${frame.wide ? ' is-wide' : ''}`} onClick={() => setLight(index)} aria-label={frame.alt || pack.story.open} data-reveal style={{ '--d': index % 5 }}>
-              <img src={frame.src} alt={frame.alt || ''} />
-              <span>{frame.title}</span>
-            </button>
-          ))}
-        </div>
       </div>
-      {light >= 0 ? <Lightbox images={frames} index={light} onClose={() => setLight(-1)} onIndex={setLight} labels={pack.story} /> : null}
+      <Gallery />
     </article>
   )
 }

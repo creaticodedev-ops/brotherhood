@@ -251,15 +251,20 @@ export const Shot = ({ story, locale, ratio = 'portrait' }) => (
 )
 
 export const Lightbox = ({ images, index, onClose, onIndex, labels }) => {
+  const closeRef = useRef(null)
+  const pointer = useRef(null)
+  const step = (direction) => onIndex((index + direction + images.length) % images.length)
+
   useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') onClose()
-      if (event.key === 'ArrowRight') onIndex((index + 1) % images.length)
-      if (event.key === 'ArrowLeft') onIndex((index - 1 + images.length) % images.length)
+      if (event.key === 'ArrowRight') step(1)
+      if (event.key === 'ArrowLeft') step(-1)
     }
     document.addEventListener('keydown', onKey)
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    closeRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
@@ -269,18 +274,35 @@ export const Lightbox = ({ images, index, onClose, onIndex, labels }) => {
   const image = images[index]
   if (!image) return null
   return (
-    <div className="viewer" role="dialog" aria-modal="true" aria-label={image.alt || labels.open}>
+    <div
+      className="viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={image.alt || labels.open}
+      onPointerDown={(event) => {
+        if (event.target.closest('button')) return
+        pointer.current = event.clientX
+      }}
+      onPointerUp={(event) => {
+        if (pointer.current == null) return
+        const delta = event.clientX - pointer.current
+        pointer.current = null
+        if (delta > 56) step(-1)
+        else if (delta < -56) step(1)
+      }}
+    >
       <header>
         <p>{image.caption || image.alt}</p>
-        <button type="button" onClick={onClose}>
+        <button ref={closeRef} type="button" onClick={onClose}>
           {labels.close}
         </button>
       </header>
-      <img src={image.src} alt={image.alt || ''} />
+      <div className="viewer-stage">
+        <button type="button" className="viewer-edge is-prev" aria-label={labels.prev} onClick={() => step(-1)} />
+        <img key={image.src} src={image.src} alt={image.alt || ''} />
+        <button type="button" className="viewer-edge is-next" aria-label={labels.next} onClick={() => step(1)} />
+      </div>
       <footer>
-        <button type="button" onClick={() => onIndex((index - 1 + images.length) % images.length)}>
-          {labels.prev}
-        </button>
         <span>
           {index + 1} / {images.length}
         </span>
@@ -295,9 +317,6 @@ export const Lightbox = ({ images, index, onClose, onIndex, labels }) => {
             {labels.read}
           </button>
         ) : null}
-        <button type="button" onClick={() => onIndex((index + 1) % images.length)}>
-          {labels.next}
-        </button>
       </footer>
     </div>
   )
