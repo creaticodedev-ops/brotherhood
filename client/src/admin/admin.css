@@ -3097,3 +3097,45 @@ html[lang='ar'] .adm-notes-head h2 {
   padding: 8px 10px;
   font: inherit;
 }
+
+.cmd-search, .cmd-form { display: grid; gap: 10px; margin: 18px 0; }
+.cmd-form { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; }
+.cmd-search input, .cmd-form input, .cmd-form select, .cmd-form textarea, .cmd-form label textarea {
+  width: 100%;
+  background: #100d0d;
+  color: #f5f1ed;
+  border: 1px solid rgba(245, 241, 237, 0.16);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+}
+.cmd-hits, .cmd-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.cmd-hits button, .cmd-filters button, .cmd-table button {
+  border: 1px solid rgba(245, 241, 237, 0.16);
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.cmd-filters button.is-on { background: #c8102e; border-color: #c8102e; color: white; }
+.cmd-list, .cmd-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cmd-list li, .cmd-cards li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid rgba(245, 241, 237, 0.08); }
+.cmd-cards button, .cmd-list button { background: none; border: 0; color: inherit; text-align: start; font: inherit; cursor: pointer; display: grid; gap: 4px; }
+.cmd-list small, .cmd-cards small, .cmd-table small { display: block; color: #92929a; }
+.cmd-cards em { color: #ff2948; font-style: normal; }
+.cmd-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.cmd-table th, .cmd-table td { text-align: start; padding: 10px 8px; border-bottom: 1px solid rgba(245, 241, 237, 0.08); vertical-align: top; }
+@media (max-width: 720px) {
+  .cmd-table { display: block; overflow-x: auto; }
+}
+
+.adm-portrait {
+  width: 88px;
+  height: 88px;
+  margin: 0 0 16px;
+  object-fit: cover;
+  border: 1px solid rgba(245, 241, 237, 0.16);
+  border-radius: 50%;
+}

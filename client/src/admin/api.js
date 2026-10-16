@@ -32,7 +32,7 @@ export const STREAM_URL = '/api/admin/stream'
 
 export const adminApi = {
   session: () => request('/session'),
-  login: (password) => request('/session', { method: 'POST', body: { password } }),
+  login: (password, email) => request('/session', { method: 'POST', body: email ? { password, email } : { password } }),
   logout: () => request('/session', { method: 'DELETE' }),
   forgotPassword: (locale) => request('/password/forgot', { method: 'POST', body: { locale } }),
   verifyReset: (token) => request('/password/verify', { method: 'POST', body: { token } }),
@@ -49,4 +49,17 @@ export const adminApi = {
   notifications: (filter, signal) => request(`/notifications?filter=${filter}&limit=60`, { signal }),
   readAll: () => request('/notifications/read', { method: 'POST', body: { all: true } }),
   setRead: (id, read) => request(`/notifications/${encodeURIComponent(id)}`, { method: 'PATCH', body: { read } }),
+  summary: (signal) => request('/ops/summary', { signal }),
+  search: (q, signal) => request(`/ops/search?q=${encodeURIComponent(q)}`, { signal }),
+  missions: (status, signal) => request(`/ops/missions${status ? `?status=${encodeURIComponent(status)}` : ''}`, { signal }),
+  saveMission: (mission) => request(mission.id ? `/ops/missions/${encodeURIComponent(mission.id)}` : '/ops/missions', { method: mission.id ? 'PATCH' : 'POST', body: mission }),
+  ledger: (params, signal) => request(`/ops/ledger?${new URLSearchParams(params)}`, { signal }),
+  setOpening: (opening) => request('/ops/book', { method: 'POST', body: { opening } }),
+  addEntry: (entry) => request('/ops/ledger', { method: 'POST', body: entry }),
+  approveEntry: (id) => request(`/ops/ledger/${encodeURIComponent(id)}/approve`, { method: 'POST', body: {} }),
+  reverseEntry: (id, reason) => request(`/ops/ledger/${encodeURIComponent(id)}/reverse`, { method: 'POST', body: { reason } }),
+  audit: (q, signal) => request(`/ops/audit?q=${encodeURIComponent(q || '')}`, { signal }),
+  staff: (signal) => request('/ops/staff', { signal }),
+  saveStaff: (account) => request(account.id ? `/ops/staff/${encodeURIComponent(account.id)}` : '/ops/staff', { method: account.id ? 'PATCH' : 'POST', body: account }),
+  openWhatsApp: (id, message, force = false) => request(`/registrations/${encodeURIComponent(id)}/whatsapp`, { method: 'POST', body: { message, force } }),
 }

@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { dbState } from '../configs/db.js'
 import { AdminAccount } from '../models/AdminAccount.js'
+import { StaffAccount, toStaff } from '../models/StaffAccount.js'
 import { hashPassword, MIN_PASSWORD, verifyPassword } from './password.js'
 
 const COOKIE = 'usb_admin'
@@ -53,17 +54,23 @@ const sign = (payload) => createHmac('sha256', secret()).update(payload).digest(
 
 export const checkPassword = async (candidate) => adminConfigured() && verifyPassword(candidate, account.passwordHash)
 
-const verifyToken = (token) => {
-  const cut = token.lastIndexOf('.')
-  if (cut < 0) return false
+const splitToken = (token) => {
+  const cut = String(token || '').lastIndexOf('.')
+  if (cut < 0) return null
   const payload = token.slice(0, cut)
-  const [version, expires, generation] = payload.split('.')
-  return (
-    version === 'v2' &&
-    Number(expires) > Date.now() &&
-    Number(generation) === account.sessionVersion &&
-    safeEqual(token.slice(cut + 1), sign(payload))
-  )
+  return { payload, signature: token.slice(cut + 1), parts: payload.split('.') }
+}
+
+const signatureOk = (token) => {
+  const parsed = splitToken(token)
+  return Boolean(parsed && Number(parsed.parts[1]) > Date.now() && safeEqual(parsed.signature, sign(parsed.payload)))
+}
+
+const verifyToken = (token) => {
+  const parsed = splitToken(token)
+  if (!parsed || !signatureOk(token)) return false
+  if (parsed.parts[0] === 'v2') return Number(parsed.parts[2]) === account.sessionVersion
+  return parsed.parts[0] === 'v3'
 }
 
 const readCookie = (req, name) => {
@@ -84,8 +91,7 @@ export const isAuthenticated = (req) => adminConfigured() && verifyToken(readCoo
 
 const isHttps = (req) => req.secure || req.get('x-forwarded-proto')?.split(',')[0].trim() === 'https'
 
-export const openSession = (req, res) => {
-  const payload = `v2.${Date.now() + SESSION_MS}.${account.sessionVersion}`
+const writeSession = (req, res, payload) => {
   res.cookie(COOKIE, `${payload}.${sign(payload)}`, {
     httpOnly: true,
     sameSite: 'strict',
@@ -94,6 +100,26 @@ export const openSession = (req, res) => {
     maxAge: SESSION_MS,
   })
 }
+
+export const openSession = (req, res) => writeSession(req, res, `v2.${Date.now() + SESSION_MS}.${account.sessionVersion}`)
+
+export const openStaffSession = (req, res, staff) => writeSession(req, res, `v3.${Date.now() + SESSION_MS}.${staff._id}.${staff.sessionVersion}`)
+
+const PRIMARY = { role: 'admin', id: 'primary', name: 'Admin', permissions: ['*'] }
+
+/** The signed-in person. Primary admin cookies stay valid. Staff cookies are checked against the account. */
+export const currentActor = async (req) => {
+  const parsed = splitToken(readCookie(req, COOKIE))
+  if (!parsed || !signatureOk(readCookie(req, COOKIE)) || !adminConfigured()) return null
+  if (parsed.parts[0] === 'v2') return Number(parsed.parts[2]) === account.sessionVersion ? PRIMARY : null
+  if (parsed.parts[0] !== 'v3') return null
+  const doc = await StaffAccount.findById(parsed.parts[2]).lean()
+  if (!doc?.active || Number(parsed.parts[3]) !== doc.sessionVersion) return null
+  const staff = toStaff(doc)
+  return { role: staff.role, id: staff.id, name: staff.name, permissions: staff.permissions }
+}
+
+export const can = (actor, permission) => Boolean(actor && (actor.permissions.includes('*') || actor.permissions.includes(permission)))
 
 export const closeSession = (res) => res.clearCookie(COOKIE, { path: COOKIE_PATH })
 

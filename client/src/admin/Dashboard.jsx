@@ -4,11 +4,15 @@ import { LangSwitch, Logo } from '../landing/ui'
 import { adminApi } from './api'
 import { ApplicationDrawer } from './ApplicationDrawer'
 import { Applications } from './Applications'
+import { AuditDesk } from './AuditDesk'
+import { CaisseDesk } from './CaisseDesk'
+import { CommandHome } from './CommandHome'
+import { MissionsDesk } from './MissionsDesk'
+import { TeamDesk } from './TeamDesk'
 import { formatCount } from './format'
 import { ContentDesk } from './ContentDesk'
 import { ApplicationsIcon, BellIcon, CloseIcon, ContentIcon, ExternalIcon, LogoutIcon, MenuIcon, OverviewIcon, SettingsIcon } from './icons'
 import { NotificationPanel, Toasts } from './NotificationCenter'
-import { Overview } from './Overview'
 import { Settings } from './Settings'
 import { useAdminText } from './strings'
 import { useAdminStream } from './useAdminStream'
@@ -17,7 +21,16 @@ import { useNotifications } from './useNotifications'
 const ID = /^[a-f0-9]{24}$/i
 const REFRESH_BATCH_MS = 150
 
-const VIEW_PATHS = { overview: '/admin', applications: '/admin/applications', content: '/admin/content', settings: '/admin/settings' }
+const VIEW_PATHS = {
+  overview: '/admin',
+  applications: '/admin/applications',
+  missions: '/admin/missions',
+  caisse: '/admin/caisse',
+  team: '/admin/team',
+  audit: '/admin/audit',
+  content: '/admin/content',
+  settings: '/admin/settings',
+}
 
 const readRoute = () => {
   const { pathname, search } = window.location
@@ -53,6 +66,7 @@ export const Dashboard = ({ onLogout }) => {
   const [toasts, setToasts] = useState([])
   const [panelOpen, setPanelOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [actor, setActor] = useState(null)
   const center = useNotifications()
   const stats = useStats(version)
   const { add: addNotification, sync: syncNotifications, reload: reloadNotifications, setRead, unread } = center
@@ -62,6 +76,10 @@ export const Dashboard = ({ onLogout }) => {
     if (path !== `${window.location.pathname}${window.location.search}`) window.history[replace ? 'replaceState' : 'pushState'](null, '', path)
     setRoute(next)
     setMenuOpen(false)
+  }, [])
+
+  useEffect(() => {
+    adminApi.session().then(setActor).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -131,7 +149,17 @@ export const Dashboard = ({ onLogout }) => {
     [setRead, dismissToast, openApplication],
   )
 
-  const pendingCount = stats.data?.statuses?.pending.count || 0
+  const pendingCount = (stats.data?.statuses?.pending.count || 0) + (stats.data?.statuses?.new.count || 0)
+  const permit = (permission) => !actor || actor.role === 'admin' || actor.permissions?.includes('*') || actor.permissions?.includes(permission)
+  const show = {
+    applications: permit('recruitment.review') || permit('recruitment.decide'),
+    missions: true,
+    caisse: permit('finance.record') || permit('finance.approve'),
+    team: !actor || actor.role === 'admin',
+    audit: !actor || actor.role === 'admin',
+    content: !actor || actor.role === 'admin',
+    settings: !actor || actor.role === 'admin',
+  }
 
   const navLink = (view, Icon, extra = null) => (
     <a
@@ -171,8 +199,12 @@ export const Dashboard = ({ onLogout }) => {
 
         <nav className="adm-nav">
           {navLink('overview', OverviewIcon)}
-          {navLink('applications', ApplicationsIcon, pendingCount ? <span className="adm-count">{formatCount(pendingCount, locale)}</span> : null)}
-          {navLink('content', ContentIcon)}
+          {show.applications ? navLink('applications', ApplicationsIcon, pendingCount ? <span className="adm-count">{formatCount(pendingCount, locale)}</span> : null) : null}
+          {show.missions ? navLink('missions', ContentIcon) : null}
+          {show.caisse ? navLink('caisse', SettingsIcon) : null}
+          {show.team ? navLink('team', ApplicationsIcon) : null}
+          {show.audit ? navLink('audit', BellIcon) : null}
+          {show.content ? navLink('content', ContentIcon) : null}
           <button
             type="button"
             className="adm-nav-link"
@@ -254,20 +286,22 @@ export const Dashboard = ({ onLogout }) => {
         </header>
 
         <main className="adm-content" id="main">
-          {route.view === 'settings' ? (
+          {route.view === 'settings' && show.settings ? (
             <Settings />
-          ) : route.view === 'content' ? (
+          ) : route.view === 'content' && show.content ? (
             <ContentDesk />
-          ) : route.view === 'applications' ? (
+          ) : route.view === 'applications' && show.applications ? (
             <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} />
+          ) : route.view === 'missions' ? (
+            <MissionsDesk />
+          ) : route.view === 'caisse' && show.caisse ? (
+            <CaisseDesk />
+          ) : route.view === 'team' && show.team ? (
+            <TeamDesk />
+          ) : route.view === 'audit' && show.audit ? (
+            <AuditDesk />
           ) : (
-            <Overview
-              stats={stats.data}
-              error={stats.error}
-              onRetry={stats.retry}
-              onOpen={openApplication}
-              onViewAll={() => navigate({ view: 'applications' })}
-            />
+            <CommandHome stats={stats.data} error={stats.error} onRetry={stats.retry} onOpen={openApplication} onNavigate={(view) => navigate({ view })} />
           )}
         </main>
       </div>

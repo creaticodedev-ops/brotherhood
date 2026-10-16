@@ -19,6 +19,7 @@ export const Login = ({ configured, onSuccess, initialMode = 'login' }) => {
   const { locale } = useI18n()
   const [mode, setMode] = useState(initialMode)
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [sent, setSent] = useState(null)
@@ -35,7 +36,7 @@ export const Login = ({ configured, onSuccess, initialMode = 'login' }) => {
     setStatus('sending')
     setError('')
     try {
-      await adminApi.login(password)
+      await adminApi.login(password, email.trim())
       onSuccess()
     } catch (err) {
       setStatus('idle')
@@ -98,6 +99,13 @@ export const Login = ({ configured, onSuccess, initialMode = 'login' }) => {
     <AuthLayout titleId="adm-login-title" kicker={a('login.kicker')} title={a('login.title')} lead={a('login.lead')} foot={a('login.secure')}>
       {configured ? (
         <form className="adm-login-form" onSubmit={onSubmit} noValidate>
+          <details className="adm-login-alt">
+            <summary>Compte équipe</summary>
+            <label className="adm-wa-label" htmlFor="adm-email">
+              E-mail
+              <input id="adm-email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
+            </label>
+          </details>
           <PasswordField
             id="adm-password"
             label={a('login.password')}

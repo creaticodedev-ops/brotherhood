@@ -15,7 +15,7 @@ const HOST = process.env.HOST || '127.0.0.1'
 
 const app = express()
 app.disable('x-powered-by')
-app.use(express.json({ limit: '100kb' }))
+app.use(express.json({ limit: '2mb' }))
 
 app.get('/api/health', (_req, res) => {
   const db = dbState()

@@ -9,7 +9,7 @@ const PUBLIC = { fr, en, ar }
 /* Written in the language the applicant used on the form, whatever language the admin works in. */
 const MEMBERSHIP = {
   fr: ({ name }) =>
-    `Bonjour ${name},\n\nTa candidature pour rejoindre The Brotherhood a été retenue. On te contacte ici pour la suite.\n\nThe Brotherhood`,
+    `Bonjour ${name} !\n\nNous avons le plaisir de t'annoncer que ta candidature pour rejoindre THE BROTHERHOOD a été acceptée ! 🎉\n\nBienvenue dans la famille. Nous sommes impatients de découvrir tes idées, ton énergie et ce que nous allons accomplir ensemble.\n\nEvery Warrior Has a Story.\n\nÀ très bientôt,\nTeam THE BROTHERHOOD`,
   en: ({ name }) =>
     `Hello ${name},\n\nYour application to join The Brotherhood has been accepted. We’ll continue the conversation here.\n\nThe Brotherhood`,
   ar: ({ name }) =>

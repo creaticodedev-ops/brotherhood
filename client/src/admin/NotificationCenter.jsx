@@ -8,11 +8,17 @@ import { useAdminText } from './strings'
 const TOAST_MS = 9000
 const MAX_TOASTS = 3
 
-const Summary = ({ item, t, locale }) => (
+const Summary = ({ item, t, a, locale }) => (
   <span className="adm-note-meta">
-    <span dir="ltr">{formatMoney(item.amount, locale, item.currency)}</span>
-    <span>{t(`register.durations.${item.duration}`)}</span>
-    <span>{t(`offers.items.${item.offer}.name`)}</span>
+    {item.offer === 'membership' || item.duration === 'join' ? (
+      <span>{a('overview.membership')}</span>
+    ) : (
+      <>
+        <span dir="ltr">{formatMoney(item.amount, locale, item.currency)}</span>
+        <span>{t(`register.durations.${item.duration}`)}</span>
+        <span>{t(`offers.items.${item.offer}.name`)}</span>
+      </>
+    )}
   </span>
 )
 
@@ -73,7 +79,7 @@ export const NotificationPanel = ({ open, center, onClose, onOpenApplication }) 
                     <span className="adm-note-text">
                       <span className="adm-note-title">{a('notifications.newApplication')}</span>
                       <strong dir="auto">{item.name}</strong>
-                      <Summary item={item} t={t} locale={locale} />
+                      <Summary item={item} t={t} a={a} locale={locale} />
                       <time dateTime={item.createdAt}>
                         {relativeTime(item.createdAt, now, locale, a('justNow'))} · {formatClock(item.createdAt, locale)}
                       </time>
@@ -128,7 +134,7 @@ const Toast = ({ toast, onOpen, onDismiss }) => {
       <div className="adm-toast-text">
         <p className="adm-note-title">{a('notifications.newApplication')}</p>
         <strong dir="auto">{item.name}</strong>
-        <Summary item={item} t={t} locale={locale} />
+        <Summary item={item} t={t} a={a} locale={locale} />
         <time dateTime={item.createdAt}>{formatClock(item.createdAt, locale)}</time>
         <div className="adm-toast-actions">
           <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpen(toast)}>

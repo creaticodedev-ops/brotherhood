@@ -6,18 +6,24 @@ import { DURATIONS, OFFER_IDS, Registration, STATUSES, TRANSITIONS, toApplicatio
 import { Story } from '../models/Story.js'
 import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
+import { recordAudit } from '../models/AuditEvent.js'
+import { portraitFile } from '../services/portrait.js'
+import { commandRouter, loginStaff } from './command.js'
 import {
   adminConfigured,
+  can,
   changePassword,
   checkPassword,
   clearFailures,
   closeSession,
   createResetToken,
+  currentActor,
   isAuthenticated,
   isCurrentPassword,
   loadAdminAccount,
   loginBlocked,
   openSession,
+  openStaffSession,
   recordFailure,
   requireAdmin,
   resetPassword,
@@ -73,7 +79,14 @@ adminRouter.use((_req, res, next) => {
 adminRouter.get('/session', async (req, res, next) => {
   try {
     await loadAdminAccount()
-    res.json({ configured: adminConfigured(), authenticated: isAuthenticated(req) })
+    const actor = isAuthenticated(req) ? await currentActor(req) : null
+    res.json({
+      configured: adminConfigured(),
+      authenticated: Boolean(actor),
+      role: actor?.role || '',
+      name: actor?.name || '',
+      permissions: actor?.permissions || [],
+    })
   } catch (error) {
     next(error)
   }
@@ -85,6 +98,18 @@ adminRouter.post('/session', async (req, res, next) => {
     if (!adminConfigured()) return res.status(503).json({ error: 'Admin not configured' })
     const key = req.ip || 'unknown'
     if (loginBlocked(key)) return res.status(429).json({ error: 'Too many attempts' })
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim() : ''
+    if (email) {
+      const staff = await loginStaff(email, req.body?.password)
+      if (!staff) {
+        recordFailure(key)
+        await wait(400)
+        return res.status(401).json({ error: 'Invalid credentials' })
+      }
+      clearFailures(key)
+      openStaffSession(req, res, staff)
+      return res.json({ authenticated: true, role: staff.role, name: staff.name })
+    }
     if (!(await checkPassword(req.body?.password))) {
       recordFailure(key)
       await wait(400)
@@ -92,7 +117,7 @@ adminRouter.post('/session', async (req, res, next) => {
     }
     clearFailures(key)
     openSession(req, res)
-    res.json({ authenticated: true })
+    res.json({ authenticated: true, role: 'admin', name: 'Admin' })
   } catch (error) {
     next(error)
   }
@@ -157,6 +182,7 @@ adminRouter.post('/password/reset', async (req, res, next) => {
 })
 
 adminRouter.use(requireAdmin)
+adminRouter.use('/ops', commandRouter)
 
 /* ── Settings: change password (signed in, current password required) ── */
 
@@ -228,7 +254,15 @@ const buildFilter = (query, { withStatus = true } = {}) => {
   return filter
 }
 
-adminRouter.get('/registrations', async (req, res, next) => {
+const recruitment = async (req, res, next) => {
+  const actor = await currentActor(req)
+  if (!actor) return res.status(401).json({ error: 'Unauthorized' })
+  if (!can(actor, 'recruitment.review') && !can(actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+  req.actor = actor
+  next()
+}
+
+adminRouter.get('/registrations', recruitment, async (req, res, next) => {
   try {
     const limit = intIn(req.query.limit, 1, PAGE_MAX, 20)
     const sortKey = SORTS[param(req.query.sort)] || 'createdAt'
@@ -255,7 +289,7 @@ adminRouter.get('/registrations', async (req, res, next) => {
   }
 })
 
-adminRouter.get('/registrations/:id', async (req, res, next) => {
+adminRouter.get('/registrations/:id', recruitment, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findById(req.params.id).lean()
@@ -266,7 +300,22 @@ adminRouter.get('/registrations/:id', async (req, res, next) => {
   }
 })
 
-adminRouter.patch('/registrations/:id', async (req, res, next) => {
+adminRouter.get('/registrations/:id/photo', recruitment, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id).select('photo').lean()
+    const file = portraitFile(doc?.photo)
+    if (!file) return res.status(404).json({ error: 'Photo not found' })
+    res.set('Cache-Control', 'private, no-store')
+    res.sendFile(file, (error) => {
+      if (error && !res.headersSent) next(error)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.patch('/registrations/:id', recruitment, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findById(req.params.id)
@@ -274,6 +323,7 @@ adminRouter.patch('/registrations/:id', async (req, res, next) => {
     const hasStatus = typeof req.body?.status === 'string' && req.body.status.length > 0
     const hasNotes = typeof req.body?.notes === 'string'
     if (!hasStatus && !hasNotes) return res.status(422).json({ error: 'Invalid status' })
+    if (hasStatus && !can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
     if (hasNotes) doc.notes = req.body.notes.trim().slice(0, 2000)
     if (hasStatus) {
       const status = param(req.body.status)
@@ -282,12 +332,37 @@ adminRouter.patch('/registrations/:id', async (req, res, next) => {
         if (!TRANSITIONS[doc.status]?.includes(status)) return res.status(409).json({ error: 'Invalid status change' })
         doc.history.push({ from: doc.status, status, at: new Date() })
         doc.status = status
+        doc.reviewedBy = req.actor.name
+        doc.reviewedAt = new Date()
+        await recordAudit(req.actor, `application.${status}`, 'application', doc._id, `${doc.firstName} ${doc.lastName}`)
       }
     }
+    if (hasNotes) await recordAudit(req.actor, 'application.note', 'application', doc._id, doc.lastName)
     await doc.save()
     const item = toApplication(doc)
     publish('application', item)
     res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.post('/registrations/:id/whatsapp', recruitment, async (req, res, next) => {
+  try {
+    if (!can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id)
+    if (!doc) return notFound(res)
+    if (!['approved', 'accepted', 'active'].includes(doc.status)) return res.status(409).json({ error: 'Application is not approved' })
+    const message = typeof req.body?.message === 'string' ? req.body.message.trim().slice(0, 1500) : ''
+    if (message.length < 10) return res.status(422).json({ error: 'Invalid message' })
+    if (doc.whatsapp?.openedAt && !req.body?.force) {
+      return res.status(409).json({ error: 'already', at: doc.whatsapp.openedAt, actor: doc.whatsapp.actor || '' })
+    }
+    doc.whatsapp = { openedAt: new Date(), actor: req.actor.name, body: message }
+    await doc.save()
+    await recordAudit(req.actor, 'whatsapp.opened', 'application', doc._id, doc.firstName)
+    res.json({ item: toApplication(doc), delivered: false, channel: 'link' })
   } catch (error) {
     next(error)
   }

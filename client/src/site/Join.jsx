@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { DEFAULT_COUNTRY, parsePhone } from '../landing/overlays/phone'
 import { PhoneField } from '../landing/overlays/PhoneField'
@@ -7,22 +7,13 @@ import { submitApplication } from './api'
 import { A, useCopy, usePageMeta } from './ui'
 
 const DRAFT_KEY = 'brotherhood-join'
-const ORDER = [
-  { id: 'polo', src: '/media/polo.jpg', alt: 'Polo Brotherhood' },
-  { id: 'night', src: '/media/night-gathering.jpg', alt: 'Groupe de nuit' },
-  { id: 'safi', src: '/media/safi-heart.jpg', alt: 'Safi vu du ciel' },
-  { id: 'beach', src: '/media/beach-fire.jpg', alt: 'Feu de plage' },
-]
-const OPENINGS = [
-  { id: 'screen', src: '/media/screening.jpg', alt: 'Projection' },
-  { id: 'warmth', src: '/media/warmth-group.jpg', alt: 'Caravane' },
-  { id: 'lantern', src: '/media/lantern-circle.jpg', alt: 'Lanternes' },
-]
+const MISSIONS = ['asfi', 'fund', 'responsibility']
 
 const empty = () => ({
   firstName: '',
   lastName: '',
   age: '',
+  gender: '',
   city: '',
   email: '',
   phone: '',
@@ -32,26 +23,67 @@ const empty = () => ({
   motivation: '',
   contribution: '',
   squads: [],
-  hook: '',
-  caption: '',
-  order: [],
-  opening: '',
-  legend: '',
-  resources: [3, 2, 3, 2],
-  plan: '',
-  logistics: '',
-  matches: ['', '', ''],
-  pitch: '',
+  asfi: '',
+  fund: '',
+  responsibility: '',
   practical: '',
 })
 
 const loadDraft = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
-    return saved ? { ...empty(), ...saved, resources: saved.resources?.length === 4 ? saved.resources : empty().resources, matches: saved.matches?.length === 3 ? saved.matches : ['', '', ''] } : empty()
+    return saved ? { ...empty(), ...saved } : empty()
   } catch {
     return empty()
   }
+}
+
+const JOIN_AUDIO = '/media/brotherhood.mp4'
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+const fitPhoto = (file) =>
+  new Promise((resolve, reject) => {
+    const source = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(image.width, image.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(image.width * scale))
+      canvas.height = Math.max(1, Math.round(image.height * scale))
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(source)
+      const type = file.type === 'image/png' && file.size < 900_000 ? 'image/png' : file.type === 'image/webp' ? 'image/webp' : 'image/jpeg'
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('invalid'))), type, 0.82)
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(source)
+      reject(new Error('invalid'))
+    }
+    image.src = source
+  })
+
+const readBlob = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('invalid'))
+    reader.readAsDataURL(blob)
+  })
+
+const JoinSound = () => {
+  const mediaRef = useRef(null)
+
+  useEffect(() => {
+    const media = mediaRef.current
+    if (!media) return undefined
+    const attempt = media.play()
+    if (attempt?.catch) attempt.catch(() => {})
+    return () => {
+      media.pause()
+    }
+  }, [])
+
+  return <audio ref={mediaRef} className="join-audio" src={JOIN_AUDIO} preload="auto" autoPlay />
 }
 
 const Field = ({ id, label, error, children }) => (
@@ -67,18 +99,59 @@ export const Join = () => {
   const { t } = useI18n()
   const copy = pack.join
   const [step, setStep] = useState(0)
+  const [mission, setMission] = useState(0)
   const [values, setValues] = useState(loadDraft)
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle')
   const [serverError, setServerError] = useState('')
   const [reference, setReference] = useState('')
+  const [portrait, setPortrait] = useState(null)
   usePageMeta(`${copy.title} — The Brotherhood`, copy.lead, '/join')
 
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(values))
   }, [values])
 
+  useEffect(() => () => {
+    if (portrait?.url) URL.revokeObjectURL(portrait.url)
+  }, [portrait])
+
   const set = (patch) => setValues((current) => ({ ...current, ...patch }))
+
+  const choosePhoto = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const allowed = PHOTO_TYPES
+    if (!allowed.includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setErrors((current) => ({ ...current, photo: copy.photoInvalid }))
+      return
+    }
+    try {
+      const blob = await fitPhoto(file)
+      if (blob.size > 1_200_000) {
+        setErrors((current) => ({ ...current, photo: copy.photoInvalid }))
+        return
+      }
+      const dataUrl = await readBlob(blob)
+      const url = URL.createObjectURL(blob)
+      setPortrait((current) => {
+        if (current?.url) URL.revokeObjectURL(current.url)
+        return { url, dataUrl }
+      })
+      setErrors((current) => ({ ...current, photo: '' }))
+    } catch {
+      setErrors((current) => ({ ...current, photo: copy.photoInvalid }))
+    }
+  }
+
+  const clearPhoto = () => {
+    setPortrait((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url)
+      return null
+    })
+    setErrors((current) => ({ ...current, photo: '' }))
+  }
 
   const validate = (index = step) => {
     const next = {}
@@ -87,6 +160,7 @@ export const Join = () => {
       if (values.lastName.trim().length < 2) next.lastName = copy.required
       const age = Number(values.age)
       if (!Number.isInteger(age) || age < 13 || age > 99) next.age = copy.invalidAge
+      if (values.gender !== 'homme' && values.gender !== 'femme') next.gender = copy.required
       if (values.city.trim().length < 2) next.city = copy.required
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(values.email.trim())) next.email = copy.invalidEmail
       if (!parsePhone(values.phone, values.phoneCountry)) next.phone = copy.invalidPhone
@@ -99,27 +173,39 @@ export const Join = () => {
     }
     if (index === 2 && !values.squads.length) next.squads = copy.squads
     if (index === 3) {
-      if (values.squads.includes('communication') && values.hook.trim().length < 8) next.hook = copy.short
-      if (values.squads.includes('design') && values.order.length !== 4) next.order = copy.required
-      if (values.squads.includes('photo') && values.legend.trim().length < 8) next.legend = copy.short
-      if (values.squads.includes('events')) {
-        if (values.resources.reduce((sum, n) => sum + Number(n), 0) !== 10) next.resources = copy.planHint
-        if (values.plan.trim().length < 8) next.plan = copy.short
-        if (values.logistics.trim().length < 8) next.logistics = copy.short
-      }
-      if (values.squads.includes('partners')) {
-        const unique = new Set(values.matches.filter(Boolean))
-        if (unique.size !== 3) next.matches = copy.matchesHint
-        if (values.pitch.trim().length < 12) next.pitch = copy.short
-      }
+      MISSIONS.forEach((key) => {
+        if (values[key].trim().length < 20) next[key] = copy.short
+      })
     }
     setErrors(next)
     return !Object.keys(next).length
   }
 
   const next = () => {
+    if (step === 3 && mission < MISSIONS.length - 1) {
+      const key = MISSIONS[mission]
+      if (values[key].trim().length < 20) {
+        setErrors({ [key]: copy.short })
+        return
+      }
+      setErrors({})
+      setMission((value) => value + 1)
+      window.scrollTo(0, 0)
+      return
+    }
     if (!validate()) return
-    setStep((value) => Math.min(5, value + 1))
+    setStep((value) => Math.min(4, value + 1))
+    window.scrollTo(0, 0)
+  }
+
+  const back = () => {
+    if (step === 3 && mission > 0) {
+      setErrors({})
+      setMission((value) => value - 1)
+      window.scrollTo(0, 0)
+      return
+    }
+    setStep((value) => value - 1)
     window.scrollTo(0, 0)
   }
 
@@ -127,26 +213,15 @@ export const Join = () => {
     set({ squads: values.squads.includes(id) ? values.squads.filter((item) => item !== id) : [...values.squads, id] })
   }
 
-  const toggleOrder = (id) => {
-    const order = values.order.includes(id) ? values.order.filter((item) => item !== id) : [...values.order, id]
-    set({ order })
-  }
-
-  const setResource = (index, raw) => {
-    const resources = [...values.resources]
-    resources[index] = Math.max(0, Math.min(10, Number(raw) || 0))
-    set({ resources })
-  }
-
-  const setMatch = (index, value) => {
-    const matches = [...values.matches]
-    matches[index] = value
-    set({ matches })
-  }
-
   const send = async () => {
-    if (![0, 1, 2, 3].every((index) => validate(index))) {
+    if (![0, 1, 2].every((index) => validate(index))) {
       setStep(0)
+      return
+    }
+    if (!validate(3)) {
+      const missing = MISSIONS.findIndex((key) => values[key].trim().length < 20)
+      setStep(3)
+      setMission(missing < 0 ? 0 : missing)
       return
     }
     setStatus('sending')
@@ -157,6 +232,7 @@ export const Join = () => {
         firstName: values.firstName,
         lastName: values.lastName,
         age: Number(values.age),
+        gender: values.gender,
         city: values.city,
         email: values.email,
         phone: values.phone,
@@ -168,29 +244,39 @@ export const Join = () => {
         squads: values.squads,
         practical: values.practical,
         locale,
+        photo: portrait?.dataUrl || '',
         challenges: {
-          hook: values.hook,
-          caption: values.caption,
-          order: values.order,
-          opening: values.opening,
-          legend: values.legend,
-          plan: `${copy.resources.map((label, index) => `${label}: ${values.resources[index]}`).join(' · ')}. ${values.plan}`,
-          logistics: values.logistics,
-          matches: values.matches.map((need, index) => `${copy.partners[index]} → ${need}`),
-          pitch: values.pitch,
+          asfi: values.asfi,
+          fund: values.fund,
+          responsibility: values.responsibility,
         },
       })
       localStorage.removeItem(DRAFT_KEY)
       setReference(saved.id)
       setStatus('saved')
     } catch (error) {
+      if (error.fields?.photo) {
+        setStep(0)
+        setErrors({ photo: copy.photoInvalid })
+        setStatus('idle')
+        return
+      }
       setStatus('error')
       setServerError(error.status === 429 ? copy.rate : error.status === 503 ? copy.offline : copy.fail)
     }
   }
 
-  if (status === 'saved') {
-    return (
+  const input = (id, type = 'text') => (
+    <Field id={id} label={copy.fields[id]} error={errors[id]}>
+      <input id={id} name={id} type={type} value={values[id]} autoComplete="on" onChange={(event) => set({ [id]: event.target.value })} />
+    </Field>
+  )
+
+  return (
+    <div className="join-stage">
+      <div className="join-bg" aria-hidden="true" />
+      <JoinSound />
+      {status === 'saved' ? (
       <article className="section page-pad">
         <div className="container join-success">
         <p className="kicker">{copy.kicker}</p>
@@ -204,16 +290,7 @@ export const Join = () => {
         </A>
         </div>
       </article>
-    )
-  }
-
-  const input = (id, type = 'text') => (
-    <Field id={id} label={copy.fields[id]} error={errors[id]}>
-      <input id={id} name={id} type={type} value={values[id]} autoComplete="on" onChange={(event) => set({ [id]: event.target.value })} />
-    </Field>
-  )
-
-  return (
+      ) : (
     <article className="section page-pad">
       <div className="container join-shell">
       <p className="kicker">{copy.kicker}</p>
@@ -233,9 +310,45 @@ export const Join = () => {
 
       {step === 0 ? (
         <div className="bh-form">
+          <div className="bh-field is-wide">
+            <p className="gender-legend" id="photo-label">{copy.fields.photo}</p>
+            <div className={`photo-pick${portrait ? ' has-photo' : ''}`}>
+              <span className="photo-pick-frame" aria-hidden="true">
+                {portrait ? <img src={portrait.url} alt="" /> : (
+                  <svg viewBox="0 0 24 24" width="28" height="28">
+                    <circle cx="12" cy="9" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M5.5 19.2c1.4-2.6 3.6-3.8 6.5-3.8s5.1 1.2 6.5 3.8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                )}
+              </span>
+              <span className="photo-pick-copy">
+                <label className="photo-pick-add">
+                  {portrait ? copy.photoReplace : copy.photoAdd}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} aria-labelledby="photo-label" />
+                </label>
+                <small>{copy.photoHint}</small>
+                {portrait ? (
+                  <button type="button" className="photo-pick-remove" onClick={clearPhoto}>{copy.photoRemove}</button>
+                ) : null}
+              </span>
+            </div>
+            <p className="bh-error" role={errors.photo ? 'alert' : undefined}>{errors.photo || ''}</p>
+          </div>
           {input('firstName')}
           {input('lastName')}
           {input('age', 'number')}
+          <div className="bh-field">
+            <p className="gender-legend" id="gender-label">{copy.fields.gender}</p>
+            <div className="gender-choice" role="radiogroup" aria-labelledby="gender-label" aria-invalid={errors.gender ? 'true' : undefined} aria-describedby={errors.gender ? 'gender-error' : undefined}>
+              {['homme', 'femme'].map((value) => (
+                <label key={value}>
+                  <input type="radio" name="gender" value={value} checked={values.gender === value} onChange={() => set({ gender: value })} />
+                  <span>{copy.genders[value]}</span>
+                </label>
+              ))}
+            </div>
+            <p className="bh-error" id="gender-error">{errors.gender || ''}</p>
+          </div>
           {input('city')}
           {input('email', 'email')}
           <div className="bh-field">
@@ -290,121 +403,42 @@ export const Join = () => {
       ) : null}
 
       {step === 3 ? (
-        <div>
-          <p className="bh-hint">{copy.challengesLead}</p>
-          {values.squads.includes('communication') ? (
-            <section className="bh-challenge">
-              <h3>{copy.hook}</h3>
-              <p className="bh-hint">{copy.hookHint}</p>
-              <textarea value={values.hook} maxLength={140} onChange={(event) => set({ hook: event.target.value })} />
-              <p className="bh-error">{errors.hook || `${values.hook.length}/140`}</p>
-              <h3>{copy.caption}</h3>
-              <p className="bh-hint">{copy.captionHint}</p>
-              <textarea value={values.caption} maxLength={400} onChange={(event) => set({ caption: event.target.value })} />
-            </section>
-          ) : null}
-          {values.squads.includes('design') ? (
-            <section className="bh-challenge">
-              <h3>{copy.order}</h3>
-              <p className="bh-hint">{copy.orderHint}</p>
-              <div className="bh-order">
-                {ORDER.map((image) => {
-                  const place = values.order.indexOf(image.id)
-                  return (
-                    <button key={image.id} type="button" className={place >= 0 ? 'is-on' : ''} onClick={() => toggleOrder(image.id)} aria-pressed={place >= 0}>
-                      <img src={image.src} alt={image.alt} />
-                      {place >= 0 ? <i>{place + 1}</i> : null}
-                    </button>
-                  )
-                })}
-              </div>
-              <p className="bh-error">{errors.order || ''}</p>
-            </section>
-          ) : null}
-          {values.squads.includes('photo') ? (
-            <section className="bh-challenge">
-              <h3>{copy.legend}</h3>
-              <p className="bh-hint">{copy.legendHint}</p>
-              <img src="/media/screening.jpg" alt="Projection de plein air Brotherhood" style={{ width: 'min(520px, 100%)', margin: '8px 0 12px' }} />
-              <textarea value={values.legend} maxLength={400} onChange={(event) => set({ legend: event.target.value })} />
-              <p className="bh-error">{errors.legend || ''}</p>
-              <h3>{copy.opening}</h3>
-              <div className="bh-order">
-                {OPENINGS.map((image) => (
-                  <button key={image.id} type="button" className={values.opening === image.id ? 'is-on' : ''} onClick={() => set({ opening: image.id })} aria-pressed={values.opening === image.id}>
-                    <img src={image.src} alt={image.alt} />
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-          {values.squads.includes('events') ? (
-            <section className="bh-challenge">
-              <h3>{copy.plan}</h3>
-              <p className="bh-hint">{copy.planHint}</p>
-              <div className="bh-points">
-                {copy.resources.map((label, index) => (
-                  <label key={label}>
-                    {label}
-                    <input type="number" min="0" max="10" value={values.resources[index]} onChange={(event) => setResource(index, event.target.value)} />
-                  </label>
-                ))}
-              </div>
-              <p className="bh-error">
-                {errors.resources || `${copy.points}: ${values.resources.reduce((sum, n) => sum + Number(n), 0)}/10`}
-              </p>
-              <p className="bh-hint">{copy.planNote}</p>
-              <textarea value={values.plan} maxLength={500} onChange={(event) => set({ plan: event.target.value })} />
-              <p className="bh-error">{errors.plan || ''}</p>
-              <h3>{copy.logistics}</h3>
-              <p className="bh-hint">{copy.logisticsHint}</p>
-              <textarea value={values.logistics} maxLength={800} onChange={(event) => set({ logistics: event.target.value })} />
-              <p className="bh-error">{errors.logistics || ''}</p>
-            </section>
-          ) : null}
-          {values.squads.includes('partners') ? (
-            <section className="bh-challenge">
-              <h3>{copy.matches}</h3>
-              <p className="bh-hint">{copy.matchesHint}</p>
-              {copy.partners.map((partner, index) => (
-                <label key={partner} className="bh-field" style={{ marginBottom: 10 }}>
-                  {partner}
-                  <select value={values.matches[index]} onChange={(event) => setMatch(index, event.target.value)}>
-                    <option value="">—</option>
-                    {copy.needs.map((need) => (
-                      <option key={need} value={need} disabled={values.matches.includes(need) && values.matches[index] !== need}>
-                        {need}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-              <p className="bh-error">{errors.matches || ''}</p>
-              <h3>{copy.pitch}</h3>
-              <p className="bh-hint">{copy.pitchHint}</p>
-              <textarea value={values.pitch} maxLength={800} onChange={(event) => set({ pitch: event.target.value })} />
-              <p className="bh-error">{errors.pitch || ''}</p>
-            </section>
-          ) : null}
-        </div>
+        <section className="mission" key={mission} aria-labelledby="mission-title">
+          <div className="mission-track" aria-hidden="true">
+            {MISSIONS.map((key, index) => (
+              <span key={key} className={index === mission ? 'is-on' : index < mission ? 'is-done' : ''} />
+            ))}
+          </div>
+          <p className="mission-index">{copy.missions[mission].index}</p>
+          <h2 id="mission-title" className="mission-title">{copy.missions[mission].title}</h2>
+          <p className="mission-ask">{copy.missions[mission].question}</p>
+          {copy.missions[mission].note ? <p className="mission-note">{copy.missions[mission].note}</p> : null}
+          <label className="mission-field" htmlFor="mission-answer">
+            <span className="sr-only">{copy.missions[mission].title}</span>
+            <textarea
+              id="mission-answer"
+              value={values[MISSIONS[mission]]}
+              maxLength={2000}
+              onChange={(event) => set({ [MISSIONS[mission]]: event.target.value })}
+            />
+          </label>
+          <p className="bh-error" role={errors[MISSIONS[mission]] ? 'alert' : undefined}>{errors[MISSIONS[mission]] || ''}</p>
+        </section>
       ) : null}
 
       {step === 4 ? (
-        <div className="bh-form">
-          <p className="bh-hint is-wide">{copy.practicalLead}</p>
-          <Field id="practical" label={copy.practical} error="">
-            <textarea id="practical" value={values.practical} maxLength={2000} onChange={(event) => set({ practical: event.target.value })} />
-          </Field>
-        </div>
-      ) : null}
-
-      {step === 5 ? (
         <div>
           <p className="bh-hint">{copy.review}</p>
           <dl className="bh-review">
+            {portrait ? (
+              <div>
+                <dt>{copy.fields.photo}</dt>
+                <dd><img className="photo-review" src={portrait.url} alt="" /></dd>
+              </div>
+            ) : null}
             <div>
               <dt>{copy.fields.firstName}</dt>
-              <dd>{values.firstName} {values.lastName} · {values.age} · {values.city}</dd>
+              <dd>{values.firstName} {values.lastName} · {copy.genders[values.gender] || ''} · {values.age} · {values.city}</dd>
             </div>
             <div>
               <dt>{copy.fields.email}</dt>
@@ -422,12 +456,12 @@ export const Join = () => {
               <dt>{copy.steps[2]}</dt>
               <dd>{values.squads.map((id) => copy.squadItems[id].name).join(' · ')}</dd>
             </div>
-            {values.hook ? <div><dt>{copy.hook}</dt><dd>{values.hook}</dd></div> : null}
-            {values.order.length ? <div><dt>{copy.order}</dt><dd>{values.order.join(' → ')}</dd></div> : null}
-            {values.legend ? <div><dt>{copy.legend}</dt><dd>{values.legend}</dd></div> : null}
-            {values.squads.includes('events') ? <div><dt>{copy.plan}</dt><dd>{values.plan}</dd></div> : null}
-            {values.pitch ? <div><dt>{copy.pitch}</dt><dd>{values.pitch}</dd></div> : null}
-            {values.practical ? <div><dt>{copy.practical}</dt><dd>{values.practical}</dd></div> : null}
+            {copy.missions.map((item, index) => (
+              <div key={item.index}>
+                <dt>{item.title}</dt>
+                <dd>{values[MISSIONS[index]]}</dd>
+              </div>
+            ))}
           </dl>
           {serverError ? <p className="bh-error" role="alert">{serverError}</p> : null}
         </div>
@@ -435,11 +469,11 @@ export const Join = () => {
 
       <div className="hero-actions">
         {step > 0 ? (
-          <button type="button" className="btn btn-ghost" onClick={() => setStep((value) => value - 1)}>
+          <button type="button" className="btn btn-ghost" onClick={back}>
             {copy.back}
           </button>
         ) : null}
-        {step < 5 ? (
+        {step < 4 ? (
           <button type="button" className="btn btn-primary" onClick={next}>
             {copy.next}
           </button>
@@ -451,5 +485,7 @@ export const Join = () => {
       </div>
       </div>
     </article>
+      )}
+    </div>
   )
 }

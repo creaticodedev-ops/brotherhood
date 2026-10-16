@@ -5,6 +5,7 @@ import { Notification, toNotification } from '../models/Notification.js'
 import { DURATIONS, Registration, toApplication } from '../models/Registration.js'
 import { publish } from '../services/adminEvents.js'
 import { validateMembership } from '../services/membership.js'
+import { savePortrait } from '../services/portrait.js'
 
 export const registrationsRouter = Router()
 
@@ -83,16 +84,25 @@ const notifyAdmin = async (doc) => {
 
 const validate = (body = {}) => {
   if (body?.kind === 'membership') return validateMembership(body, parsePhone(body.phone, body.phoneCountry))
-  return validateLegacy(body)
+  return { ...validateLegacy(body), photo: null }
 }
 
 registrationsRouter.post('/', async (req, res, next) => {
   if (rateLimited(req.ip)) return res.status(429).json({ error: 'Too many requests' })
-  const { data, errors } = validate(req.body)
+  const { data, errors, photo } = validate(req.body)
   if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid registration', fields: errors })
   if (dbState() !== 'connected') return res.status(503).json({ error: 'Database unavailable' })
   try {
     const doc = await Registration.create({ ...data, amount: Math.round(data.amount * 100) / 100 })
+    if (photo) {
+      try {
+        doc.photo = await savePortrait(doc.id, photo)
+        await doc.save()
+      } catch (error) {
+        await Registration.deleteOne({ _id: doc._id })
+        throw error
+      }
+    }
     res.status(201).json({ id: doc.id, createdAt: doc.createdAt })
     notifyAdmin(doc)
   } catch (error) {

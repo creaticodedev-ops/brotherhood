@@ -129,29 +129,52 @@ export const About = () => {
         </div>
       </section>
 
-      <section className="group-chapter is-light" id="creative">
-        <div className="container group-make">
-          <div data-reveal>
-            <p className="kicker">{copy.creativeKicker}</p>
-            <h2 className="h2">{copy.creativeTitle}</h2>
-            <p>{copy.creative}</p>
-            <div className="hero-actions">
-              <A className="btn btn-primary" href="/creative">
-                <span>{copy.creativeLink}</span>
-                <ArrowIcon />
-              </A>
-              <A className="btn btn-ghost" href="/social">
-                {copy.creativeSocial}
+      <section className="group-chapter is-light group-eye" id="creative">
+        <div className="container group-eye-intro" data-reveal>
+          <p className="kicker">{copy.creativeKicker}</p>
+          <h2 className="group-eye-title">{copy.creativeTitle}</h2>
+        </div>
+        <A className="group-eye-hero" href={FRAMES[0].href} data-reveal>
+          <img src={FRAMES[0].src} alt={copy.frames[0].alt} />
+          <span className="group-slate">
+            <small>01</small>
+            {copy.frames[0].caption}
+          </span>
+        </A>
+        <div className="container">
+          <div className="group-storyboard">
+            <A className="group-print is-tall" href={FRAMES[1].href} data-reveal style={{ '--d': 1 }}>
+              <span className="group-print-media">
+                <img src={FRAMES[1].src} alt={copy.frames[1].alt} />
+              </span>
+              <span className="group-slate">
+                <small>02</small>
+                {copy.frames[1].caption}
+              </span>
+            </A>
+            <div className="group-story-side">
+              <div className="group-eye-foot" data-reveal style={{ '--d': 2 }}>
+                <p>{copy.creative}</p>
+                <div className="hero-actions">
+                  <A className="btn btn-primary" href="/creative">
+                    <span>{copy.creativeLink}</span>
+                    <ArrowIcon />
+                  </A>
+                  <A className="btn btn-ghost" href="/social">
+                    {copy.creativeSocial}
+                  </A>
+                </div>
+              </div>
+              <A className="group-print" href={FRAMES[2].href} data-reveal style={{ '--d': 3 }}>
+                <span className="group-print-media">
+                  <img src={FRAMES[2].src} alt={copy.frames[2].alt} />
+                </span>
+                <span className="group-slate">
+                  <small>03</small>
+                  {copy.frames[2].caption}
+                </span>
               </A>
             </div>
-          </div>
-          <div className="group-frames">
-            {FRAMES.map((frame, i) => (
-              <A className="group-frame" key={frame.src} href={frame.href} data-reveal style={{ '--d': i }}>
-                <img src={frame.src} alt={copy.frames[i].alt} />
-                <span>{copy.frames[i].caption}</span>
-              </A>
-            ))}
           </div>
         </div>
       </section>

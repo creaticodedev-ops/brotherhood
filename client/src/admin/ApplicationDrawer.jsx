@@ -6,7 +6,7 @@ import { CheckIcon, CloseIcon, CopyIcon, MailIcon, WhatsAppIcon } from './icons'
 import { useDialogFocus } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
-import { confirmationMessage, messageLocale, openWhatsApp, whatsappUrl } from './whatsapp'
+import { confirmationMessage, messageLocale, openWhatsApp } from './whatsapp'
 
 const ACTION_STYLE = {
   new: 'btn-ghost',
@@ -32,10 +32,16 @@ const MembershipFile = ({ item, onChanged }) => {
       setState('error')
     }
   }
+  const challengeLabel = {
+    asfi: 'Mission 01 — Asfi',
+    fund: 'Mission 02 — Financer',
+    responsibility: 'Mission 03 — Responsabilité',
+  }
   const challengeLines = Object.entries(item.challenges || {}).filter(([, value]) => value && (typeof value === 'string' ? value.trim() : value.length))
   return (
     <section className="adm-block">
       <h3>Candidature Brotherhood</h3>
+      {item.photo ? <img className="adm-portrait" alt="" src={`/api/admin/registrations/${item.id}/photo`} /> : null}
       <dl className="adm-facts">
         <div>
           <dt>Âge</dt>
@@ -63,7 +69,7 @@ const MembershipFile = ({ item, onChanged }) => {
         </div>
         {challengeLines.map(([key, value]) => (
           <div className="is-wide" key={key}>
-            <dt>{key}</dt>
+            <dt>{challengeLabel[key] || key}</dt>
             <dd style={{ whiteSpace: 'pre-wrap' }}>{Array.isArray(value) ? value.join(' · ') : value}</dd>
           </div>
         ))}
@@ -93,14 +99,25 @@ const MembershipFile = ({ item, onChanged }) => {
   )
 }
 const ACTION_ORDER = ['approved', 'active', 'completed', 'pending', 'rejected']
-const CONFIRMED = ['approved', 'active']
+const CONFIRMED = ['approved', 'accepted', 'active']
 
 const WhatsAppConfirm = ({ item, notice }) => {
   const a = useAdminText()
   const initial = confirmationMessage(item)
   const [draft, setDraft] = useState(null)
   const [copied, setCopied] = useState(false)
-  const message = draft ?? initial
+  const message = draft ?? item.whatsapp?.body ?? initial
+  const [local, setLocal] = useState('')
+
+  const prepare = (force = false) => {
+    if (item.whatsapp?.openedAt && !force) {
+      setLocal('already')
+      return
+    }
+    const opened = openWhatsApp(item.phone, message)
+    setLocal(opened ? 'opened' : 'blocked')
+    adminApi.openWhatsApp(item.id, message, force || Boolean(item.whatsapp?.openedAt)).catch(() => {})
+  }
 
   const copy = async () => {
     try {
@@ -146,17 +163,28 @@ const WhatsAppConfirm = ({ item, notice }) => {
               </button>
             ) : null}
           </p>
+          {item.whatsapp?.openedAt ? (
+            <p className="adm-wa-hint">Message déjà préparé {item.whatsapp.actor ? `par ${item.whatsapp.actor}` : ''}. Un second envoi doit être confirmé.</p>
+          ) : (
+            <p className="adm-wa-hint">Le bouton ouvre WhatsApp avec ce texte. L’envoi se confirme dans WhatsApp, pas ici.</p>
+          )}
           <div className="adm-actions">
-            <a className="btn btn-sm btn-primary adm-wa-send" href={whatsappUrl(item.phone, message)} target="_blank" rel="noopener noreferrer">
+            <button type="button" className="btn btn-sm btn-primary adm-wa-send" onClick={() => prepare(local === 'already')}>
               <WhatsAppIcon />
-              <span>{a('whatsapp.send')}</span>
-            </a>
+              <span>{local === 'already' ? 'Confirmer et ouvrir' : a('whatsapp.send')}</span>
+            </button>
             <button type="button" className="btn btn-sm btn-ghost" onClick={copy}>
               {copied ? <CheckIcon /> : <CopyIcon />}
               <span>{a(copied ? 'whatsapp.copied' : 'whatsapp.copy')}</span>
             </button>
           </div>
-          {notice ? (
+          {local === 'already' ? <p className="adm-wa-notice" role="status">Ce message a déjà été préparé. Confirme pour l’ouvrir encore.</p> : null}
+          {local && local !== 'already' ? (
+            <p className={`adm-wa-notice is-${local}`} role="status">
+              {a(`whatsapp.${local}`)}
+            </p>
+          ) : null}
+          {notice && !local ? (
             <p className={`adm-wa-notice is-${notice}`} role="status">
               {a(`whatsapp.${notice}`)}
             </p>
@@ -224,8 +252,7 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
       const data = await adminApi.setStatus(id, status)
       setState({ id, item: data.item, transitions: data.transitions, error: null })
       // Still inside the click's user activation, so the browser lets the new tab open.
-      if ((status === 'approved' || status === 'accepted') && data.item.phone) setWaNotice(openWhatsApp(data.item.phone, confirmationMessage(data.item)) ? 'opened' : 'blocked')
-      else setWaNotice('')
+      setWaNotice('')
       onChanged()
     } catch (err) {
       setActionError(a(err.status === 409 ? 'detail.conflict' : 'detail.error'))
