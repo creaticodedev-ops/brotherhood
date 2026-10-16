@@ -1,17 +1,15 @@
-import logoWebp from '../assets/brand/usbonds-logo-96.webp'
-import logoPng from '../assets/brand/usbonds-logo.png'
+import logoPng from '../assets/brand/brotherhood-logo.png'
 import { useI18n } from '../i18n/I18nProvider'
 import { LOCALES } from '../i18n/locales'
 
 /** Official logo — rendered as-is, never recoloured or redrawn. */
 export const Logo = ({ className = '', eager = false }) => (
   <picture className={`logo ${className}`.trim()}>
-    <source type="image/webp" srcSet={logoWebp} />
     <img
       src={logoPng}
-      alt="US Bonds"
+      alt="The Brotherhood"
       width="500"
-      height="129"
+      height="160"
       decoding="async"
       fetchPriority={eager ? 'high' : 'auto'}
       loading={eager ? 'eager' : 'lazy'}

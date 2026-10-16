@@ -1,0 +1,17 @@
+{
+  "kind": "membership",
+  "firstName": "Test",
+  "lastName": "Archive",
+  "age": 21,
+  "city": "Safi",
+  "email": "brotherhood-test@example.com",
+  "phone": "0612345678",
+  "phoneCountry": "MA",
+  "organization": "Test",
+  "domain": "Photo",
+  "motivation": "Je veux documenter les missions du groupe avec justesse.",
+  "contribution": "Prises de vue et legendes.",
+  "squads": ["photo"],
+  "challenges": { "legend": "Une projection, de dos, sous la banderole." },
+  "locale": "fr"
+}

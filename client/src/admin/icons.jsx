@@ -28,6 +28,13 @@ export const ApplicationsIcon = () => (
   </Icon>
 )
 
+export const ContentIcon = () => (
+  <Icon>
+    <rect x="2.5" y="3" width="13" height="12" rx="1.5" />
+    <path d="M2.5 7h13M6 3v12" />
+  </Icon>
+)
+
 export const SettingsIcon = () => (
   <Icon>
     <path d="M2.5 5.5h7M13.5 5.5h2M2.5 12.5h2M8.5 12.5h7" />

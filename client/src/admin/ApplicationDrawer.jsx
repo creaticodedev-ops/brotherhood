@@ -9,6 +9,80 @@ import { useAdminText } from './strings'
 import { confirmationMessage, messageLocale, openWhatsApp, whatsappUrl } from './whatsapp'
 
 const ACTION_STYLE = { approved: 'btn-primary', active: 'btn-primary', completed: 'btn-primary', rejected: 'adm-btn-danger', pending: 'btn-ghost' }
+
+const MembershipFile = ({ item, onChanged }) => {
+  const [notes, setNotes] = useState(item.notes || '')
+  const [state, setState] = useState('')
+  const save = async () => {
+    setState('saving')
+    try {
+      await adminApi.setNotes(item.id, notes)
+      setState('saved')
+      onChanged()
+    } catch {
+      setState('error')
+    }
+  }
+  const challengeLines = Object.entries(item.challenges || {}).filter(([, value]) => value && (typeof value === 'string' ? value.trim() : value.length))
+  return (
+    <section className="adm-block">
+      <h3>Candidature Brotherhood</h3>
+      <dl className="adm-facts">
+        <div>
+          <dt>Âge</dt>
+          <dd>{item.age || '—'}</dd>
+        </div>
+        <div>
+          <dt>Pôles</dt>
+          <dd>{(item.squads || []).join(', ') || '—'}</dd>
+        </div>
+        <div className="is-wide">
+          <dt>Établissement</dt>
+          <dd>{item.organization || '—'}</dd>
+        </div>
+        <div className="is-wide">
+          <dt>Domaine</dt>
+          <dd>{item.domain || '—'}</dd>
+        </div>
+        <div className="is-wide">
+          <dt>Motivation</dt>
+          <dd style={{ whiteSpace: 'pre-wrap' }}>{item.motivation || '—'}</dd>
+        </div>
+        <div className="is-wide">
+          <dt>Apport</dt>
+          <dd style={{ whiteSpace: 'pre-wrap' }}>{item.contribution || '—'}</dd>
+        </div>
+        {challengeLines.map(([key, value]) => (
+          <div className="is-wide" key={key}>
+            <dt>{key}</dt>
+            <dd style={{ whiteSpace: 'pre-wrap' }}>{Array.isArray(value) ? value.join(' · ') : value}</dd>
+          </div>
+        ))}
+        {item.practical ? (
+          <div className="is-wide">
+            <dt>Note libre</dt>
+            <dd style={{ whiteSpace: 'pre-wrap' }}>{item.practical}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <label className="adm-wa-label" htmlFor="adm-notes">
+        Notes de lecture
+      </label>
+      <textarea id="adm-notes" className="adm-wa-message" rows={4} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} />
+      <div className="adm-actions">
+        <button type="button" className="btn btn-sm btn-ghost" onClick={save} disabled={state === 'saving'}>
+          {state === 'saving' ? '…' : 'Enregistrer la note'}
+        </button>
+      </div>
+      {state === 'saved' ? <p role="status">Note enregistrée.</p> : null}
+      {state === 'error' ? (
+        <p role="alert" className="adm-alert">
+          La note n’a pas été enregistrée.
+        </p>
+      ) : null}
+    </section>
+  )
+}
 const ACTION_ORDER = ['approved', 'active', 'completed', 'pending', 'rejected']
 const CONFIRMED = ['approved', 'active']
 
@@ -199,22 +273,26 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
               <StatusPill status={item.status} />
             </section>
 
-            <section className="adm-invest">
-              <p className="adm-invest-label">{a('detail.investment')}</p>
-              <p className="adm-invest-amount" dir="ltr">
-                {formatMoney(item.amount, locale, item.currency)}
-              </p>
-              <dl className="adm-invest-meta">
-                <div>
-                  <dt>{a('detail.offer')}</dt>
-                  <dd>{t(`offers.items.${item.offer}.name`)}</dd>
-                </div>
-                <div>
-                  <dt>{a('detail.duration')}</dt>
-                  <dd>{t(`register.durations.${item.duration}`)}</dd>
-                </div>
-              </dl>
-            </section>
+            {item.kind === 'membership' ? (
+              <MembershipFile item={item} onChanged={onChanged} />
+            ) : (
+              <section className="adm-invest">
+                <p className="adm-invest-label">{a('detail.investment')}</p>
+                <p className="adm-invest-amount" dir="ltr">
+                  {formatMoney(item.amount, locale, item.currency)}
+                </p>
+                <dl className="adm-invest-meta">
+                  <div>
+                    <dt>{a('detail.offer')}</dt>
+                    <dd>{t(`offers.items.${item.offer}.name`)}</dd>
+                  </div>
+                  <div>
+                    <dt>{a('detail.duration')}</dt>
+                    <dd>{t(`register.durations.${item.duration}`)}</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
 
             <section className="adm-block">
               <h3>{a('detail.decision')}</h3>

@@ -1,4 +1,4 @@
-/* US Bonds design system — black (authority) · white (clarity) · green (opportunity) */
+/* Shared tokens. Public pages use site.css. Admin still reads these accent variables. */
 
 :root {
   --black: #050605;
@@ -8,11 +8,11 @@
   --white: #ffffff;
   --white-soft: #f4f5f3;
 
-  --green: #009a5a;
-  --green-fill: #00804b;
-  --green-fill-hover: #006e41;
-  --green-bright: #22b573;
-  --green-ink: #00804b;
+  --green: #c8102e;
+  --green-fill: #c8102e;
+  --green-fill-hover: #a30d25;
+  --green-bright: #ff2948;
+  --green-ink: #c8102e;
   --error: #b4534b;
 
   /* Contextual tokens (dark by default, overridden by `.is-light`) */
@@ -25,7 +25,7 @@
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
   --accent: var(--green-bright);
-  --accent-soft: rgba(0, 154, 90, 0.12);
+  --accent-soft: rgba(200, 16, 46, 0.14);
 
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Inter Tight', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -139,7 +139,7 @@ button {
 }
 
 ::selection {
-  background: rgba(0, 154, 90, 0.35);
+  background: rgba(200, 16, 46, 0.38);
   color: var(--white);
 }
 

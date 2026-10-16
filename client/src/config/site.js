@@ -4,8 +4,20 @@ const env = import.meta.env
  * Public company details. Leave a value empty until it is confirmed —
  * empty fields are simply not rendered (nothing is invented).
  */
+const cleanUrl = (value) => {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:') return ''
+    url.search = ''
+    url.hash = ''
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return ''
+  }
+}
+
 export const SITE = {
-  name: 'US Bonds',
+  name: 'The Brotherhood',
   url: env.VITE_SITE_URL || '',
   contact: {
     email: env.VITE_CONTACT_EMAIL || '',
@@ -14,9 +26,9 @@ export const SITE = {
     address: env.VITE_COMPANY_ADDRESS || '',
   },
   social: {
-    instagram: env.VITE_SOCIAL_INSTAGRAM || '',
-    tiktok: env.VITE_SOCIAL_TIKTOK || '',
-    telegram: env.VITE_SOCIAL_TELEGRAM || '',
+    instagram: cleanUrl(env.VITE_SOCIAL_INSTAGRAM || 'https://www.instagram.com/the_brotherhood07'),
+    facebook: cleanUrl(env.VITE_SOCIAL_FACEBOOK || 'https://www.facebook.com/share/1HU15v79vN'),
+    tiktok: cleanUrl(env.VITE_SOCIAL_TIKTOK || 'https://www.tiktok.com/@brotherhood.safi07'),
   },
 }
 
@@ -48,7 +60,7 @@ const httpsUrl = (value) => {
 }
 
 /** Official accounts. A network without a configured https:// URL is shown as "coming soon", never linked. */
-export const SOCIAL_LINKS = ['instagram', 'tiktok', 'telegram'].map((key) => ({ key, url: httpsUrl(SITE.social[key]) }))
+export const SOCIAL_LINKS = ['instagram', 'facebook', 'tiktok'].map((key) => ({ key, url: httpsUrl(SITE.social[key]) }))
 
 /** Where "Commencer" leads until registration exists. */
 export const START_TARGET = 'offers'

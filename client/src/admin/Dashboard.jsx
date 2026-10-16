@@ -5,7 +5,8 @@ import { adminApi } from './api'
 import { ApplicationDrawer } from './ApplicationDrawer'
 import { Applications } from './Applications'
 import { formatCount } from './format'
-import { ApplicationsIcon, BellIcon, CloseIcon, ExternalIcon, LogoutIcon, MenuIcon, OverviewIcon, SettingsIcon } from './icons'
+import { ContentDesk } from './ContentDesk'
+import { ApplicationsIcon, BellIcon, CloseIcon, ContentIcon, ExternalIcon, LogoutIcon, MenuIcon, OverviewIcon, SettingsIcon } from './icons'
 import { NotificationPanel, Toasts } from './NotificationCenter'
 import { Overview } from './Overview'
 import { Settings } from './Settings'
@@ -16,7 +17,7 @@ import { useNotifications } from './useNotifications'
 const ID = /^[a-f0-9]{24}$/i
 const REFRESH_BATCH_MS = 150
 
-const VIEW_PATHS = { overview: '/admin', applications: '/admin/applications', settings: '/admin/settings' }
+const VIEW_PATHS = { overview: '/admin', applications: '/admin/applications', content: '/admin/content', settings: '/admin/settings' }
 
 const readRoute = () => {
   const { pathname, search } = window.location
@@ -171,6 +172,7 @@ export const Dashboard = ({ onLogout }) => {
         <nav className="adm-nav">
           {navLink('overview', OverviewIcon)}
           {navLink('applications', ApplicationsIcon, pendingCount ? <span className="adm-count">{formatCount(pendingCount, locale)}</span> : null)}
+          {navLink('content', ContentIcon)}
           <button
             type="button"
             className="adm-nav-link"
@@ -254,6 +256,8 @@ export const Dashboard = ({ onLogout }) => {
         <main className="adm-content" id="main">
           {route.view === 'settings' ? (
             <Settings />
+          ) : route.view === 'content' ? (
+            <ContentDesk />
           ) : route.view === 'applications' ? (
             <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} />
           ) : (

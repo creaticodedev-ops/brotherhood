@@ -5,12 +5,12 @@ import { getNested, interpolate } from '../i18n/locales'
 /* Admin-only copy, kept apart from the public dictionaries so the public bundle stays unchanged. */
 
 const fr = {
-  meta: { title: 'US Bonds — Administration' },
-  brand: 'Centre de contrôle',
+  meta: { title: 'The Brotherhood — Administration' },
+  brand: 'Administration',
   login: {
     kicker: 'Espace privé',
-    title: 'Centre de contrôle US Bonds',
-    lead: 'Accès réservé à l’administration. Gérez les demandes d’investissement et les souscriptions en temps réel.',
+    title: 'Administration Brotherhood',
+    lead: 'Accès réservé. Gérez les candidatures, les missions et les activités publiées.',
     password: 'Mot de passe administrateur',
     show: 'Afficher le mot de passe',
     hide: 'Masquer le mot de passe',
@@ -83,7 +83,8 @@ const fr = {
   nav: {
     primary: 'Navigation administration',
     overview: 'Vue d’ensemble',
-    applications: 'Demandes',
+    applications: 'Candidatures',
+    content: 'Archives',
     notifications: 'Notifications',
     settings: 'Paramètres',
     site: 'Voir le site public',
@@ -251,12 +252,12 @@ const fr = {
 }
 
 const en = {
-  meta: { title: 'US Bonds — Administration' },
-  brand: 'Control center',
+  meta: { title: 'The Brotherhood — Administration' },
+  brand: 'Administration',
   login: {
     kicker: 'Private area',
-    title: 'US Bonds control center',
-    lead: 'Restricted to the administration. Manage investment applications and subscriptions in real time.',
+    title: 'Brotherhood administration',
+    lead: 'Restricted access. Review applications and the stories published on the site.',
     password: 'Admin password',
     show: 'Show password',
     hide: 'Hide password',
@@ -329,6 +330,7 @@ const en = {
     primary: 'Admin navigation',
     overview: 'Overview',
     applications: 'Applications',
+    content: 'Archive',
     notifications: 'Notifications',
     settings: 'Settings',
     site: 'View public site',
@@ -496,12 +498,12 @@ const en = {
 }
 
 const ar = {
-  meta: { title: 'US Bonds — لوحة الإدارة' },
-  brand: 'مركز التحكم',
+  meta: { title: 'The Brotherhood — الإدارة' },
+  brand: 'الإدارة',
   login: {
     kicker: 'مساحة خاصة',
-    title: 'مركز التحكم US Bonds',
-    lead: 'الدخول مخصص للإدارة فقط. أدِر طلبات الاستثمار والاشتراكات في الوقت الفعلي.',
+    title: 'إدارة Brotherhood',
+    lead: 'الدخول مخصص للإدارة. راجع طلبات الانضمام والقصص المنشورة.',
     password: 'كلمة مرور المسؤول',
     show: 'إظهار كلمة المرور',
     hide: 'إخفاء كلمة المرور',
@@ -574,6 +576,7 @@ const ar = {
     primary: 'تنقّل الإدارة',
     overview: 'نظرة عامة',
     applications: 'الطلبات',
+    content: 'الأرشيف',
     notifications: 'الإشعارات',
     settings: 'الإعدادات',
     site: 'عرض الموقع العام',

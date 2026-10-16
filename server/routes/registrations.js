@@ -2,8 +2,9 @@ import { Router } from 'express'
 import { parsePhoneNumberFromString } from 'libphonenumber-js/max'
 import { dbState } from '../configs/db.js'
 import { Notification, toNotification } from '../models/Notification.js'
-import { DURATIONS, OFFER_IDS, Registration, toApplication } from '../models/Registration.js'
+import { DURATIONS, Registration, toApplication } from '../models/Registration.js'
 import { publish } from '../services/adminEvents.js'
+import { validateMembership } from '../services/membership.js'
 
 export const registrationsRouter = Router()
 
@@ -36,9 +37,10 @@ const rateLimited = (ip) => {
 
 const text = (value, max) => (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, max) : '')
 
-const validate = (body = {}) => {
+const validateLegacy = (body = {}) => {
   const phone = parsePhone(body.phone, body.phoneCountry)
   const data = {
+    kind: 'legacy',
     offer: text(body.offer, 20),
     firstName: text(body.firstName, 60),
     lastName: text(body.lastName, 60),
@@ -51,7 +53,7 @@ const validate = (body = {}) => {
     locale: ['fr', 'en', 'ar'].includes(body.locale) ? body.locale : 'fr',
   }
   const errors = {}
-  if (!OFFER_IDS.includes(data.offer)) errors.offer = 'invalid'
+  if (!['essential', 'advanced', 'premium'].includes(data.offer)) errors.offer = 'invalid'
   if (data.firstName.length < 2) errors.firstName = 'required'
   if (data.lastName.length < 2) errors.lastName = 'required'
   if (data.city.length < 2) errors.city = 'required'
@@ -68,8 +70,8 @@ const notifyAdmin = async (doc) => {
     const notification = await Notification.create({
       registration: doc._id,
       name: `${doc.firstName} ${doc.lastName}`,
-      amount: doc.amount,
-      currency: doc.currency,
+      amount: doc.amount || 0,
+      currency: doc.currency || '',
       duration: doc.duration,
       offer: doc.offer,
     })
@@ -77,6 +79,11 @@ const notifyAdmin = async (doc) => {
   } catch (error) {
     console.error('[admin] Notification failed:', error.message)
   }
+}
+
+const validate = (body = {}) => {
+  if (body?.kind === 'membership') return validateMembership(body, parsePhone(body.phone, body.phoneCountry))
+  return validateLegacy(body)
 }
 
 registrationsRouter.post('/', async (req, res, next) => {

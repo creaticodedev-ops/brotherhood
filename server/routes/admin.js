@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { dbState } from '../configs/db.js'
 import { Notification, toNotification } from '../models/Notification.js'
 import { DURATIONS, OFFER_IDS, Registration, STATUSES, TRANSITIONS, toApplication } from '../models/Registration.js'
+import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import {
   adminConfigured,
@@ -266,17 +267,23 @@ adminRouter.get('/registrations/:id', async (req, res, next) => {
 
 adminRouter.patch('/registrations/:id', async (req, res, next) => {
   try {
-    const status = param(req.body?.status)
-    if (!STATUSES.includes(status)) return res.status(422).json({ error: 'Invalid status' })
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findById(req.params.id)
     if (!doc) return notFound(res)
-    if (doc.status !== status) {
-      if (!TRANSITIONS[doc.status]?.includes(status)) return res.status(409).json({ error: 'Invalid status change' })
-      doc.history.push({ from: doc.status, status, at: new Date() })
-      doc.status = status
-      await doc.save()
+    const hasStatus = typeof req.body?.status === 'string' && req.body.status.length > 0
+    const hasNotes = typeof req.body?.notes === 'string'
+    if (!hasStatus && !hasNotes) return res.status(422).json({ error: 'Invalid status' })
+    if (hasNotes) doc.notes = req.body.notes.trim().slice(0, 2000)
+    if (hasStatus) {
+      const status = param(req.body.status)
+      if (!STATUSES.includes(status)) return res.status(422).json({ error: 'Invalid status' })
+      if (doc.status !== status) {
+        if (!TRANSITIONS[doc.status]?.includes(status)) return res.status(409).json({ error: 'Invalid status change' })
+        doc.history.push({ from: doc.status, status, at: new Date() })
+        doc.status = status
+      }
     }
+    await doc.save()
     const item = toApplication(doc)
     publish('application', item)
     res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
@@ -284,6 +291,8 @@ adminRouter.patch('/registrations/:id', async (req, res, next) => {
     next(error)
   }
 })
+
+adminRouter.use('/stories', storiesAdminRouter)
 
 /* ── Statistics (computed from the database on every request) ── */
 

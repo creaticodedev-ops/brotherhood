@@ -5,7 +5,7 @@ export const LOCALES = [
 ]
 
 export const DEFAULT_LOCALE = 'fr'
-const STORAGE_KEY = 'udbonds-lang'
+const STORAGE_KEY = 'brotherhood-lang'
 const CODES = LOCALES.map((item) => item.code)
 
 export const getLocaleMeta = (code) => LOCALES.find((item) => item.code === code) || LOCALES[0]

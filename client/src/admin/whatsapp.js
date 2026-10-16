@@ -7,19 +7,29 @@ import { numberLocale } from '../market/format'
 const PUBLIC = { fr, en, ar }
 
 /* Written in the language the applicant used on the form, whatever language the admin works in. */
+const MEMBERSHIP = {
+  fr: ({ name }) =>
+    `Bonjour ${name},\n\nTa candidature pour rejoindre The Brotherhood a été retenue. On te contacte ici pour la suite.\n\nThe Brotherhood`,
+  en: ({ name }) =>
+    `Hello ${name},\n\nYour application to join The Brotherhood has been accepted. We’ll continue the conversation here.\n\nThe Brotherhood`,
+  ar: ({ name }) =>
+    `مرحباً ${name}،\n\nتم قبول طلبك للانضمام إلى The Brotherhood. نكمل معك من هنا.\n\nThe Brotherhood`,
+}
+
 const TEMPLATES = {
   fr: ({ name, offer, amount, duration }) =>
-    `Bonjour ${name},\n\nNous avons le plaisir de vous confirmer que votre demande d’investissement (offre ${offer}, ${amount}, durée : ${duration}) a été approuvée. Votre inscription est maintenant confirmée.\n\nPour les prochaines étapes et les détails complémentaires, vous pouvez nous contacter directement ici, sur WhatsApp.\n\nUS Bonds`,
+    `Bonjour ${name},\n\nNous avons le plaisir de vous confirmer que votre demande (offre ${offer}, ${amount}, durée : ${duration}) a été approuvée.\n\nPour la suite, vous pouvez nous écrire ici, sur WhatsApp.\n\nThe Brotherhood`,
   en: ({ name, offer, amount, duration }) =>
-    `Hello ${name},\n\nWe are pleased to confirm that your investment application (${offer} offer, ${amount}, duration: ${duration}) has been approved. Your registration is now confirmed.\n\nFor the next steps and any further details, you can contact us directly here on WhatsApp.\n\nUS Bonds`,
+    `Hello ${name},\n\nYour application (${offer}, ${amount}, duration: ${duration}) has been approved.\n\nFor the next steps, you can write to us here on WhatsApp.\n\nThe Brotherhood`,
   ar: ({ name, offer, amount, duration }) =>
-    `مرحباً ${name}،\n\nيسعدنا أن نؤكد لك أنه تمت الموافقة على طلب الاستثمار الخاص بك (عرض ${offer}، ${amount}، المدة: ${duration}). تسجيلك مؤكد الآن.\n\nللاطلاع على الخطوات التالية والتفاصيل الإضافية، يمكنك التواصل معنا مباشرة هنا عبر واتساب.\n\nUS Bonds`,
+    `مرحباً ${name}،\n\nتمت الموافقة على طلبك (${offer}، ${amount}، المدة: ${duration}).\n\nللخطوات التالية يمكنك مراسلتنا هنا عبر واتساب.\n\nThe Brotherhood`,
 }
 
 export const messageLocale = (item) => (TEMPLATES[item.locale] ? item.locale : 'fr')
 
 export const confirmationMessage = (item) => {
   const locale = messageLocale(item)
+  if (item.kind === 'membership') return MEMBERSHIP[locale]({ name: item.firstName.trim() })
   const text = (key) => getNested(PUBLIC[locale], key) ?? key
   const amount = `${new Intl.NumberFormat(numberLocale(locale), { maximumFractionDigits: 2 }).format(item.amount)} ${item.currency || 'USD'}`
   return TEMPLATES[locale]({
