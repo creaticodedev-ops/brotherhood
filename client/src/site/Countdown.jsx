@@ -41,7 +41,7 @@ export const useRegistrationWindow = (reloadKey = 0) => {
   return result
 }
 
-export const RegistrationClock = ({ state, copy, children, onElapsed }) => {
+export const RegistrationClock = ({ state, copy, children, onElapsed, plain = false }) => {
   const target = state?.showCountdown && state.target ? new Date(state.target).getTime() : null
   const [left, setLeft] = useState(() => (target ? Math.max(0, target - Date.now()) : 0))
   const elapsedRef = useRef(onElapsed)
@@ -87,7 +87,7 @@ export const RegistrationClock = ({ state, copy, children, onElapsed }) => {
         : copy.closedTitle
 
   return (
-    <section className="clock" aria-label={headline}>
+    <section className={plain ? 'clock is-plain' : 'clock'} aria-label={headline}>
       <p className="clock-kicker">{copy.kicker}</p>
       <h2 className="clock-title">{headline}</h2>
       <p className="clock-message">{copy[messageKey(state)]}</p>

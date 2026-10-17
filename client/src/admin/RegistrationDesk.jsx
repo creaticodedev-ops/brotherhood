@@ -266,10 +266,10 @@ export const RegistrationDesk = () => {
       {failure === 'load' ? <p className="bh-error" role="alert">{copy.loadError}</p> : null}
 
       {loading ? null : (
-        <form className="adm-panel adm-pass adm-pass-form adm-window" onSubmit={onSubmit}>
+        <form className="adm-panel adm-window" onSubmit={onSubmit}>
           <div className="adm-window-status" aria-live="polite">
             <span className={`adm-window-pill is-${preview.phase}`}>{copy.phases[preview.phase]}</span>
-            {form.override !== 'auto' ? <span className="adm-window-pill is-manual">{copy.manual}</span> : <span className="adm-window-pill">{copy.schedule}</span>}
+            <span className={`adm-window-pill${form.override === 'auto' ? '' : ' is-manual'}`}>{form.override === 'auto' ? copy.schedule : copy.manual}</span>
           </div>
 
           <label className="adm-window-toggle">
@@ -277,67 +277,61 @@ export const RegistrationDesk = () => {
             <span>{form.countdownVisible ? copy.visible : copy.hidden}</span>
           </label>
 
-          <div className="adm-window-grid">
-            <div className="field">
-              <label htmlFor="reg-zone">{copy.zone}</label>
-              <div className="field-control">
-                <select id="reg-zone" value={form.timeZone} onChange={(event) => set({ timeZone: event.target.value })}>
-                  {WINDOW_ZONES.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="reg-open">{copy.opens}</label>
-              <div className="field-control">
-                <input id="reg-open" type="datetime-local" value={form.opensAt} onChange={(event) => set({ opensAt: event.target.value })} />
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="reg-close">{copy.closes}</label>
-              <div className="field-control">
-                <input id="reg-close" type="datetime-local" value={form.closesAt} onChange={(event) => set({ closesAt: event.target.value })} />
-              </div>
-              <p className="field-error">{fieldError === 'order' ? copy.order : fieldError === 'invalid' ? copy.invalid : ''}</p>
-            </div>
-            <div className="field">
-              <label htmlFor="reg-message">{copy.message}</label>
-              <div className="field-control">
-                <select id="reg-message" value={form.messagePreset} onChange={(event) => set({ messagePreset: event.target.value })}>
-                  {Object.entries(copy.presets).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+          <div className="adm-window-fields">
+            <label className="adm-window-field is-wide" htmlFor="reg-zone">
+              <span>{copy.zone}</span>
+              <select id="reg-zone" value={form.timeZone} onChange={(event) => set({ timeZone: event.target.value })}>
+                {WINDOW_ZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="adm-window-field" htmlFor="reg-open">
+              <span>{copy.opens}</span>
+              <input id="reg-open" type="datetime-local" value={form.opensAt} onChange={(event) => set({ opensAt: event.target.value })} />
+            </label>
+            <label className="adm-window-field" htmlFor="reg-close">
+              <span>{copy.closes}</span>
+              <input id="reg-close" type="datetime-local" value={form.closesAt} onChange={(event) => set({ closesAt: event.target.value })} />
+            </label>
+            <label className="adm-window-field is-wide" htmlFor="reg-message">
+              <span>{copy.message}</span>
+              <select id="reg-message" value={form.messagePreset} onChange={(event) => set({ messagePreset: event.target.value })}>
+                {Object.entries(copy.presets).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+          {fieldError ? <p className="adm-window-error" role="alert">{fieldError === 'order' ? copy.order : copy.invalid}</p> : null}
 
           <fieldset className="adm-window-override">
             <legend>{copy.override}</legend>
-            {[
-              ['auto', copy.auto],
-              ['open', copy.forceOpen],
-              ['closed', copy.forceClosed],
-            ].map(([value, label]) => (
-              <label key={value}>
-                <input type="radio" name="override" value={value} checked={form.override === value} onChange={() => set({ override: value })} />
-                <span>{label}</span>
-              </label>
-            ))}
+            <div className="adm-window-choices">
+              {[
+                ['auto', copy.auto],
+                ['open', copy.forceOpen],
+                ['closed', copy.forceClosed],
+              ].map(([value, label]) => (
+                <label key={value} className={form.override === value ? 'is-on' : ''}>
+                  <input type="radio" name="override" value={value} checked={form.override === value} onChange={() => set({ override: value })} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
           </fieldset>
 
-          <p className="adm-window-zone">
+          <p className="adm-window-meta">
             {form.timeZone}
             {form.opensAt ? ` · ${form.opensAt.replace('T', ' ')}` : ''}
             {form.closesAt ? ` → ${form.closesAt.replace('T', ' ')}` : ''}
           </p>
 
-          <div className="hero-actions">
+          <div className="adm-window-actions">
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? copy.saving : copy.save}
             </button>
@@ -351,11 +345,11 @@ export const RegistrationDesk = () => {
             </button>
           </div>
           {notice === 'saved' ? <p className="adm-window-saved" role="status">{copy.saved}</p> : null}
-          {failure === 'save' ? <p className="bh-error" role="alert">{copy.saveError}</p> : null}
+          {failure === 'save' ? <p className="adm-window-error" role="alert">{copy.saveError}</p> : null}
 
           <div className="adm-window-preview">
-            <p className="clock-kicker">{copy.preview}</p>
-            <RegistrationClock state={{ ...preview, configured: true, showCountdown: form.countdownVisible && preview.showCountdown }} copy={copy.clock} />
+            <p>{copy.preview}</p>
+            <RegistrationClock plain state={{ ...preview, configured: true, showCountdown: form.countdownVisible && Boolean(preview.target) && !preview.invalid }} copy={copy.clock} />
           </div>
         </form>
       )}
