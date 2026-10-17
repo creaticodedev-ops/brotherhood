@@ -11,7 +11,7 @@ import { adminConfigured, loadAdminAccount } from './services/adminAuth.js'
 import { seedStories } from './services/stories.js'
 
 const PORT = Number(process.env.PORT) || 5000
-const HOST = process.env.HOST || '127.0.0.1'
+const HOST = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1')
 
 const app = express()
 app.disable('x-powered-by')

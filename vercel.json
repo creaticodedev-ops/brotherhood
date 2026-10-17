@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://brotherhood-nafz.onrender.com/api/:path*"
+    }
+  ]
+}
