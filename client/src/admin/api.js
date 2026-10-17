@@ -62,4 +62,6 @@ export const adminApi = {
   staff: (signal) => request('/ops/staff', { signal }),
   saveStaff: (account) => request(account.id ? `/ops/staff/${encodeURIComponent(account.id)}` : '/ops/staff', { method: account.id ? 'PATCH' : 'POST', body: account }),
   openWhatsApp: (id, message, force = false) => request(`/registrations/${encodeURIComponent(id)}/whatsapp`, { method: 'POST', body: { message, force } }),
+  registrationWindow: (signal) => request('/registration-window', { signal }),
+  saveRegistrationWindow: (body) => request('/registration-window', { method: 'PUT', body }),
 }

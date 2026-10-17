@@ -13,6 +13,7 @@ import { formatCount } from './format'
 import { ContentDesk } from './ContentDesk'
 import { ApplicationsIcon, BellIcon, CloseIcon, ContentIcon, ExternalIcon, LogoutIcon, MenuIcon, OverviewIcon, SettingsIcon } from './icons'
 import { NotificationPanel, Toasts } from './NotificationCenter'
+import { RegistrationDesk } from './RegistrationDesk'
 import { Settings } from './Settings'
 import { useAdminText } from './strings'
 import { useAdminStream } from './useAdminStream'
@@ -29,6 +30,7 @@ const VIEW_PATHS = {
   team: '/admin/team',
   audit: '/admin/audit',
   content: '/admin/content',
+  registration: '/admin/registration',
   settings: '/admin/settings',
 }
 
@@ -159,6 +161,7 @@ export const Dashboard = ({ onLogout }) => {
     audit: !actor || actor.role === 'admin',
     content: !actor || actor.role === 'admin',
     settings: !actor || actor.role === 'admin',
+    registration: !actor || actor.role === 'admin',
   }
 
   const navLink = (view, Icon, extra = null) => (
@@ -217,6 +220,7 @@ export const Dashboard = ({ onLogout }) => {
             <span>{a('nav.notifications')}</span>
             {unread ? <span className="adm-count is-alert">{formatCount(unread, locale)}</span> : null}
           </button>
+          {show.registration ? navLink('registration', SettingsIcon) : null}
           {navLink('settings', SettingsIcon)}
         </nav>
 
@@ -288,6 +292,8 @@ export const Dashboard = ({ onLogout }) => {
         <main className="adm-content" id="main">
           {route.view === 'settings' && show.settings ? (
             <Settings />
+          ) : route.view === 'registration' && show.registration ? (
+            <RegistrationDesk />
           ) : route.view === 'content' && show.content ? (
             <ContentDesk />
           ) : route.view === 'applications' && show.applications ? (

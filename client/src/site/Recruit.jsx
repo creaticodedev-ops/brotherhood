@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LOCALES } from '../i18n/locales'
 import { useReveal } from '../landing/hooks'
 import { ArrowIcon, Logo } from '../landing/ui'
+import { RegistrationClock, useRegistrationWindow } from './Countdown'
 import { A, useCopy, usePageMeta } from './ui'
 import './recruit.css'
 
@@ -94,6 +95,9 @@ export const Recruit = () => {
   const copy = pack.recruit
   const [open, setOpen] = useState(false)
   const [solid, setSolid] = useState(false)
+  const [clockReload, setClockReload] = useState(0)
+  const registration = useRegistrationWindow(clockReload)
+  const onClockElapsed = useCallback(() => setClockReload((value) => value + 1), [])
   usePageMeta(copy.metaTitle, copy.metaDescription, '/recruit')
   useReveal(locale)
 
@@ -259,6 +263,9 @@ export const Recruit = () => {
       <section className="recruit-apply" id="apply">
         <Plate src="/media/safi-heart.jpg" width={1024} height={691} />
         <div className="container recruit-apply-copy" data-reveal>
+          {registration.window?.showCountdown ? (
+            <RegistrationClock state={registration.window} copy={copy.clock} onElapsed={onClockElapsed} />
+          ) : null}
           <p className="kicker">THE BROTHERHOOD</p>
           <h2 dir={locale === 'ar' ? 'rtl' : 'ltr'}>{copy.closeTitle}</h2>
           <p>{copy.closeLead}</p>

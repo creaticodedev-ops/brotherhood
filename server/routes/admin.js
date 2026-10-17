@@ -31,6 +31,8 @@ import {
   resetTokenState,
 } from '../services/adminAuth.js'
 import { passwordProblem } from '../services/password.js'
+import { loadRegistrationWindow, readSettingsInput, resolveRegistration, saveRegistrationWindow, toPublicWindow, windowAdminOnly } from '../services/registrationWindow.js'
+import { utcToZonedInput } from '../../shared/registrationWindow.js'
 import { appUrl, deliverResetLink, resetEmailConfigured } from '../services/resetDelivery.js'
 
 export const adminRouter = Router()
@@ -243,6 +245,44 @@ adminRouter.get('/stream', (req, res) => {
 })
 
 adminRouter.use((_req, res, next) => (dbState() === 'connected' ? next() : res.status(503).json({ error: 'Database unavailable' })))
+
+/* ── Registration schedule ── */
+
+const presentWindow = (doc) => {
+  const state = resolveRegistration(doc)
+  return {
+    ...toPublicWindow(doc),
+    override: state.override,
+    scheduled: state.scheduled,
+    countdownVisible: state.countdownVisible,
+    form: {
+      countdownVisible: state.countdownVisible,
+      timeZone: state.timeZone,
+      opensAt: utcToZonedInput(state.opensAt, state.timeZone),
+      closesAt: utcToZonedInput(state.closesAt, state.timeZone),
+      override: state.override,
+      messagePreset: state.messagePreset,
+    },
+  }
+}
+
+adminRouter.get('/registration-window', windowAdminOnly, async (_req, res, next) => {
+  try {
+    res.json(presentWindow(await loadRegistrationWindow()))
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.put('/registration-window', windowAdminOnly, async (req, res, next) => {
+  try {
+    const { errors, data } = readSettingsInput(req.body || {})
+    if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid settings', fields: errors })
+    res.json(presentWindow(await saveRegistrationWindow(data)))
+  } catch (error) {
+    next(error)
+  }
+})
 
 /* ── Applications ── */
 

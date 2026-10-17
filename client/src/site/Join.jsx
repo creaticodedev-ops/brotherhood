@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { DEFAULT_COUNTRY, dialCode, parsePhone } from '../landing/overlays/phone'
 import { PhoneField } from '../landing/overlays/PhoneField'
 import '../landing/overlays/overlays.css'
 import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { submitApplication } from './api'
+import { RegistrationClock, useRegistrationWindow } from './Countdown'
 import { A, useCopy, usePageMeta } from './ui'
 
 const DRAFT_KEY = 'brotherhood-join'
@@ -225,6 +226,9 @@ export const Join = () => {
   const [serverError, setServerError] = useState('')
   const [reference, setReference] = useState('')
   const [portrait, setPortrait] = useState(null)
+  const [clockReload, setClockReload] = useState(0)
+  const registration = useRegistrationWindow(clockReload)
+  const onClockElapsed = useCallback(() => setClockReload((value) => value + 1), [])
   usePageMeta(`${copy.title} — The Brotherhood`, copy.lead, '/join')
 
   useEffect(() => {
@@ -381,7 +385,7 @@ export const Join = () => {
         return
       }
       setStatus('error')
-      setServerError(error.status === 429 ? copy.rate : error.status === 503 ? copy.offline : copy.fail)
+      setServerError(error.status === 403 ? copy.closed : error.status === 429 ? copy.rate : error.status === 503 ? copy.offline : copy.fail)
     }
   }
 
@@ -395,7 +399,13 @@ export const Join = () => {
     <div className="join-stage">
       <div className="join-bg" aria-hidden="true" />
       <JoinSound />
-      {status === 'saved' ? (
+      {registration.window?.configured && !registration.window.accepting ? (
+        <article className="section page-pad">
+          <div className="container join-shell">
+            <RegistrationClock state={{ ...registration.window, configured: true, showCountdown: registration.window.showCountdown }} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
+          </div>
+        </article>
+      ) : status === 'saved' ? (
       <article className="section page-pad">
         <div className="container join-success">
         <p className="kicker">{copy.kicker}</p>
@@ -415,6 +425,9 @@ export const Join = () => {
       <p className="kicker">{copy.kicker}</p>
       <h1 className="page-title">{copy.title}</h1>
       <p className="lead">{copy.lead}</p>
+      {registration.window?.showCountdown ? (
+        <RegistrationClock state={registration.window} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
+      ) : null}
       <div className="join-meter" style={{ '--step': step }} aria-hidden="true">
         <span />
       </div>

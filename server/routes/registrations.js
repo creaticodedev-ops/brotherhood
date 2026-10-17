@@ -6,6 +6,7 @@ import { DURATIONS, Registration, toApplication } from '../models/Registration.j
 import { publish } from '../services/adminEvents.js'
 import { validateMembership } from '../services/membership.js'
 import { savePortrait } from '../services/portrait.js'
+import { loadRegistrationWindow, toPublicWindow } from '../services/registrationWindow.js'
 
 export const registrationsRouter = Router()
 
@@ -88,12 +89,25 @@ const validate = (body = {}) => {
   return { ...validateLegacy(body), photo: null }
 }
 
-registrationsRouter.post('/', async (req, res, next) => {
-  if (rateLimited(req.ip)) return res.status(429).json({ error: 'Too many requests' })
-  const { data, errors, photo } = validate(req.body)
-  if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid registration', fields: errors })
+registrationsRouter.get('/window', async (_req, res, next) => {
   if (dbState() !== 'connected') return res.status(503).json({ error: 'Database unavailable' })
   try {
+    const settings = await loadRegistrationWindow()
+    res.set('Cache-Control', 'no-store').json(toPublicWindow(settings))
+  } catch (error) {
+    next(error)
+  }
+})
+
+registrationsRouter.post('/', async (req, res, next) => {
+  if (rateLimited(req.ip)) return res.status(429).json({ error: 'Too many requests' })
+  if (dbState() !== 'connected') return res.status(503).json({ error: 'Database unavailable' })
+  try {
+    const settings = await loadRegistrationWindow()
+    const windowState = toPublicWindow(settings)
+    if (!windowState.accepting) return res.status(403).json({ error: 'Registration closed', phase: windowState.phase })
+    const { data, errors, photo } = validate(req.body)
+    if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid registration', fields: errors })
     const doc = await Registration.create({ ...data, amount: Math.round(data.amount * 100) / 100 })
     if (photo) {
       try {
