@@ -322,24 +322,54 @@ export const Lightbox = ({ images, index, onClose, onIndex, labels }) => {
   )
 }
 
-export const SocialRow = ({ pack, compact = false }) => {
+const SOCIAL_MARKS = {
+  instagram: (
+    <>
+      <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5" />
+      <circle cx="12" cy="12" r="4.1" />
+      <circle cx="17.3" cy="6.7" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  facebook: <path d="M14.2 8.2h-1.7c-.5 0-.8.2-.8.8v1.6h2.4l-.3 2.3h-2.1V20H9.4v-7.1H7.8v-2.3h1.6V8.8c0-2 1.2-3.3 3.3-3.3.8 0 1.5.1 1.5.1v2.6z" fill="currentColor" stroke="none" />,
+  tiktok: (
+    <>
+      <path d="M13.75 3.5v11.25a3.75 3.75 0 1 1-3.75-3.75" />
+      <path d="M13.75 3.5c.35 2.75 2.3 4.7 5 4.95" />
+    </>
+  ),
+}
+
+const SocialMark = ({ name }) => (
+  <svg className="social-mark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {SOCIAL_MARKS[name]}
+  </svg>
+)
+
+export const SocialRow = ({ pack, compact = false, withIcons = false }) => {
   const text = pack.social || pack
   return (
     <div className={`social-row${compact ? ' is-compact' : ''}`}>
-      {SOCIAL_LINKS.map((item) => (
-        <article key={item.key} className={`social-card is-${item.key}`}>
-          <span>{item.key === 'tiktok' ? 'TikTok' : item.key === 'facebook' ? 'Facebook' : 'Instagram'}</span>
-          {compact ? null : <p>{text[item.key]}</p>}
-          {item.url ? (
-            <a href={item.url} target="_blank" rel="noopener noreferrer">
-              {pack.follow || text.visit}
-              <ArrowIcon />
-            </a>
-          ) : (
-            <em>{text.missing}</em>
-          )}
-        </article>
-      ))}
+      {SOCIAL_LINKS.map((item) => {
+        const name = item.key === 'tiktok' ? 'TikTok' : item.key === 'facebook' ? 'Facebook' : 'Instagram'
+        const action = pack.follow || text.visit
+        return (
+          <article key={item.key} className={`social-card is-${item.key}`}>
+            <span>
+              {withIcons ? <SocialMark name={item.key} /> : null}
+              {name}
+            </span>
+            {compact ? null : <p>{text[item.key]}</p>}
+            {item.url ? (
+              <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={withIcons ? `${name}. ${action}` : undefined}>
+                {action}
+                <ArrowIcon />
+              </a>
+            ) : (
+              <em>{text.missing}</em>
+            )}
+          </article>
+        )
+      })}
     </div>
   )
 }

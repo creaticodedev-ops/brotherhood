@@ -4,6 +4,7 @@ import '../landing/hero.css'
 import './site.css'
 import { Home } from './Home'
 import { Join } from './Join'
+import { Recruit } from './Recruit'
 import { About, Archive, Creative, NotFound, Privacy, SocialPage, StoryPage } from './Pages'
 import { Footer, Nav, useCopy } from './ui'
 
@@ -16,6 +17,7 @@ const match = (pathname) => {
   if (path === '/creative') return { name: 'creative', path }
   if (path === '/social') return { name: 'social', path }
   if (path === '/join') return { name: 'join', path }
+  if (path === '/recruit') return { name: 'recruit', path }
   if (path === '/privacy') return { name: 'privacy', path }
   const mission = path.match(/^\/missions\/([a-z0-9-]+)$/)
   if (mission) return { name: 'story', path, slug: mission[1] }
@@ -48,6 +50,18 @@ export const SiteApp = () => {
   if (route.name === 'social') page = <SocialPage />
   if (route.name === 'join') page = <Join />
   if (route.name === 'privacy') page = <Privacy />
+  if (route.name === 'recruit') {
+    return (
+      <div className="bh">
+        <a className="skip-link" href="#main">
+          {pack.a11y.skip}
+        </a>
+        <main id="main" tabIndex={-1}>
+          <Recruit />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="bh">
