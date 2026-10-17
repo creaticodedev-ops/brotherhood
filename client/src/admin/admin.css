@@ -325,19 +325,65 @@
   text-decoration-color: var(--green-bright);
 }
 
-.adm-login .adm-wa-label input {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  margin-top: 8px;
-  padding: 0 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--white);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: inherit;
+.adm-login-staff {
+  min-width: 0;
+  margin: 0 0 18px;
+}
+
+.adm-login-staff > summary {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  color: var(--text-dim);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.adm-login-staff > summary::-webkit-details-marker {
+  display: none;
+}
+
+.adm-login-staff > summary::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  margin-inline-end: 8px;
+  border-block: 4px solid transparent;
+  border-inline-start: 5px solid currentColor;
+  transition: transform 0.2s var(--ease);
+}
+
+.adm-login-staff[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.adm-login-staff > summary:focus {
+  outline: none;
+}
+
+.adm-login-staff > summary:focus-visible {
+  outline: 2px solid var(--green-bright);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.adm-login-staff .field {
+  margin-top: 2px;
+}
+
+html[lang='ar'] .adm-login-staff > summary {
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: var(--font-arabic);
 }
 
 .adm-login-note {
@@ -554,7 +600,7 @@ html[lang='ar'] :is(.adm-login-title, .adm-title, .adm-kpi-value, .adm-invest-am
   letter-spacing: 0;
 }
 
-html[lang='ar'] :is(:is(.adm-login, .adm-pass-form) .field label, .adm-kpi-label, .adm-table th, .adm-block h3, .adm-invest-label, .adm-side-label, .adm-note-title) {
+html[lang='ar'] :is(:is(.adm-login, .adm-pass-form) .field label, .adm-login-staff > summary, .adm-kpi-label, .adm-table th, .adm-block h3, .adm-invest-label, .adm-side-label, .adm-note-title) {
   font-size: 0.8125rem;
   letter-spacing: 0;
   text-transform: none;

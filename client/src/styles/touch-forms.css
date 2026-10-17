@@ -53,13 +53,8 @@
   .foot-admin,
   .adm-login-alt,
   .adm-reveal,
-  .adm-login details.adm-login-alt > summary {
+  .adm-login-staff > summary {
     min-height: 44px;
-  }
-
-  .adm-login details.adm-login-alt > summary {
-    display: flex;
-    align-items: center;
   }
 
   .foot-list a {

@@ -99,12 +99,14 @@ export const Login = ({ configured, onSuccess, initialMode = 'login' }) => {
     <AuthLayout titleId="adm-login-title" kicker={a('login.kicker')} title={a('login.title')} lead={a('login.lead')} foot={a('login.secure')}>
       {configured ? (
         <form className="adm-login-form" onSubmit={onSubmit} noValidate>
-          <details className="adm-login-alt">
+          <details className="adm-login-staff">
             <summary>Compte équipe</summary>
-            <label className="adm-wa-label" htmlFor="adm-email">
-              E-mail
-              <input id="adm-email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
-            </label>
+            <div className="field">
+              <label htmlFor="adm-email">E-mail</label>
+              <div className="field-control">
+                <input id="adm-email" type="email" autoComplete="username" dir="ltr" inputMode="email" spellCheck="false" value={email} onChange={(event) => setEmail(event.target.value)} />
+              </div>
+            </div>
           </details>
           <PasswordField
             id="adm-password"
