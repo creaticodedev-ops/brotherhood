@@ -25,7 +25,10 @@ const args = Object.fromEntries(
   }),
 )
 const mode = process.argv[2]
-const redact = (value) => String(value).replace(/mongodb(?:\+srv)?:\/\/\S+/gi, 'mongodb://[redacted]')
+const redact = (value) =>
+  String(value)
+    .replace(/mongodb(?:\+srv)?:\/\/\S+/gi, 'mongodb://[redacted]')
+    .replace(/[\w.-]*mongodb\.net/gi, '[atlas-host]')
 
 const missingPortraits = async () => {
   const withPhoto = await Registration.find({ photo: { $nin: ['', null] } }).select('_id createdAt').sort({ createdAt: 1 }).lean()
