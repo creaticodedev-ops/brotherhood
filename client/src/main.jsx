@@ -6,11 +6,16 @@ import { SiteApp } from './site/SiteApp'
 
 const AdminApp = lazy(() => import('./admin/AdminApp'))
 
+const onVercelHost = window.location.hostname.endsWith('.vercel.app')
+if (onVercelHost) {
+  window.location.replace(`https://www.brotherhood07.com${window.location.pathname}${window.location.search}${window.location.hash}`)
+}
+
 const isAdmin = /^\/admin(\/|$)/.test(window.location.pathname)
 
 // Public routes are handled inside SiteApp. Unknown paths render the site 404.
 
-createRoot(document.getElementById('root')).render(
+if (!onVercelHost) createRoot(document.getElementById('root')).render(
   <StrictMode>
     {isAdmin ? (
       <I18nProvider titleKey={null}>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { categoryLabel, storyPath } from '../../../shared/catalog.js'
 import { useReveal } from '../landing/hooks'
 import { ArrowIcon } from '../landing/ui'
-import { SOCIAL_LINKS } from '../config/site'
+import { SOCIAL_LINKS, publicUrl } from '../config/site'
 import { loadStories, loadStory } from './api'
 import { Gallery } from './Gallery'
 import { A, Lightbox, useCopy, usePageMeta } from './ui'
@@ -151,7 +151,7 @@ export const StoryPage = ({ slug }) => {
     )
   }
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : storyPath(story)
+  const shareUrl = publicUrl(storyPath(story))
   const coverIsFirst = story.images.length > 1 && story.images[0]?.src === story.cover
   const plates = coverIsFirst ? story.images.slice(1) : story.images
   const plateOffset = coverIsFirst ? 1 : 0

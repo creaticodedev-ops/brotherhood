@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LOCALES } from '../i18n/locales'
 import { useI18n } from '../i18n/I18nProvider'
-import { MEMBERSHIP_LAUNCH, SOCIAL_LINKS } from '../config/site'
+import { MEMBERSHIP_LAUNCH, SOCIAL_LINKS, publicUrl } from '../config/site'
 import { categoryLabel, storyPath } from '../../../shared/catalog.js'
 import { ArrowIcon, Logo } from '../landing/ui'
 import { COPY } from './copy'
@@ -53,9 +53,9 @@ export const usePageMeta = (title, description, path = '/') => {
     set('meta[name="description"]', 'content', description)
     set('meta[property="og:title"]', 'content', title)
     set('meta[property="og:description"]', 'content', description)
-    set('meta[property="og:url"]', 'content', `${window.location.origin}${path}`)
+    set('meta[property="og:url"]', 'content', publicUrl(path))
     const link = document.head.querySelector('link[rel="canonical"]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'canonical' }))
-    link.href = `${window.location.origin}${path}`
+    link.href = publicUrl(path)
   }, [description, path, title])
 }
 

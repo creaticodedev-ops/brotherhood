@@ -16,9 +16,16 @@ const cleanUrl = (value) => {
   }
 }
 
+export const PUBLIC_ORIGIN = 'https://www.brotherhood07.com'
+
+export const publicUrl = (path = '/') => {
+  const suffix = path.startsWith('/') ? path : `/${path}`
+  return `${PUBLIC_ORIGIN}${suffix}`
+}
+
 export const SITE = {
   name: 'The Brotherhood',
-  url: env.VITE_SITE_URL || '',
+  url: env.VITE_SITE_URL || PUBLIC_ORIGIN,
   contact: {
     email: env.VITE_CONTACT_EMAIL || '',
     phone: env.VITE_CONTACT_PHONE || '',
