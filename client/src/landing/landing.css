@@ -57,8 +57,12 @@
 }
 
 .logo img {
+  display: block;
   width: auto;
   height: 100%;
+  aspect-ratio: 190 / 40;
+  object-fit: contain;
+  object-position: center;
   user-select: none;
 }
 
@@ -143,7 +147,9 @@
 .nav-logo {
   display: inline-flex;
   flex: none;
-  height: 32px;
+  align-items: center;
+  height: 40px;
+  min-width: 0;
 }
 
 .nav-logo .logo {
@@ -380,9 +386,15 @@
   }
 }
 
+@media (min-width: 480px) and (max-width: 559.98px) {
+  .nav-logo {
+    height: 28px;
+  }
+}
+
 @media (min-width: 1100px) {
   .nav-logo {
-    height: 36px;
+    height: 40px;
   }
 
   .nav-links,
@@ -445,7 +457,7 @@
 }
 
 .menu-logo {
-  height: 32px;
+  height: 40px;
 }
 
 .menu-body {

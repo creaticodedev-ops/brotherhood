@@ -8,8 +8,8 @@ export const Logo = ({ className = '', eager = false }) => (
     <img
       src={logoPng}
       alt="The Brotherhood"
-      width="500"
-      height="160"
+      width="190"
+      height="40"
       decoding="async"
       fetchPriority={eager ? 'high' : 'auto'}
       loading={eager ? 'eager' : 'lazy'}

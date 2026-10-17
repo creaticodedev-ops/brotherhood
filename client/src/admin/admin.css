@@ -18,8 +18,12 @@
 }
 
 .logo img {
+  display: block;
   width: auto;
   height: 100%;
+  aspect-ratio: 190 / 40;
+  object-fit: contain;
+  object-position: center;
   user-select: none;
 }
 
@@ -121,7 +125,7 @@
 
 .adm-login-logo {
   display: inline-flex;
-  height: 30px;
+  height: 40px;
 }
 
 .adm-login-card {
@@ -667,7 +671,7 @@ html[lang='ar'] :is(:is(.adm-login, .adm-pass-form) .field label, .adm-login-sta
 
 .adm-side-logo {
   display: inline-flex;
-  height: 28px;
+  height: 36px;
 }
 
 .adm-side-label {
@@ -798,7 +802,7 @@ html[lang='ar'] :is(:is(.adm-login, .adm-pass-form) .field label, .adm-login-sta
 
 .adm-top-logo {
   display: inline-flex;
-  height: 24px;
+  height: 32px;
 }
 
 .adm-crumb {
