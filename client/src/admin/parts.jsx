@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { initials } from './format'
 import { useAdminText } from './strings'
 
@@ -11,11 +12,15 @@ export const StatusPill = ({ status }) => {
   )
 }
 
-export const Avatar = ({ item, size = 'md' }) => (
-  <span className={`adm-avatar is-${size}`} aria-hidden="true">
-    {initials(item.firstName, item.lastName)}
-  </span>
-)
+export const Avatar = ({ item, size = 'md' }) => {
+  const [failed, setFailed] = useState(false)
+  const photo = Boolean(item.photo) && !failed
+  return (
+    <span className={`adm-avatar is-${size}${photo ? ' has-photo' : ''}`} aria-hidden="true">
+      {photo ? <img src={`/api/admin/registrations/${item.id}/photo`} alt="" onError={() => setFailed(true)} /> : initials(item.firstName, item.lastName)}
+    </span>
+  )
+}
 
 export const ErrorState = ({ error, onRetry }) => {
   const a = useAdminText()

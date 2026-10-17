@@ -19,7 +19,23 @@ const ACTION_STYLE = {
   rejected: 'adm-btn-danger',
 }
 
+const MISSIONS = ['asfi', 'fund', 'responsibility']
+const LEGACY = {
+  hook: 'Écrire le hook d’un Reel',
+  caption: 'Légende du post',
+  order: 'Mettre quatre images dans un ordre',
+  legend: 'Écrire la légende de cette image',
+  opening: 'Quelle image ouvre le récit ?',
+  plan: 'Répartir 10 moyens',
+  logistics: 'Un imprévu',
+  matches: 'Associer un appui à un projet',
+  pitch: 'Le message au partenaire',
+}
+
+const answerText = (value) => (Array.isArray(value) ? value.join(' · ') : String(value))
+
 const MembershipFile = ({ item, onChanged }) => {
+  const a = useAdminText()
   const [notes, setNotes] = useState(item.notes || '')
   const [state, setState] = useState('')
   const save = async () => {
@@ -32,70 +48,60 @@ const MembershipFile = ({ item, onChanged }) => {
       setState('error')
     }
   }
-  const challengeLabel = {
-    asfi: 'Mission 01 — Asfi',
-    fund: 'Mission 02 — Financer',
-    responsibility: 'Mission 03 — Responsabilité',
-  }
-  const challengeLines = Object.entries(item.challenges || {}).filter(([, value]) => value && (typeof value === 'string' ? value.trim() : value.length))
+  const challenges = item.challenges || {}
+  const extras = Object.entries(challenges).filter(([key, value]) => !MISSIONS.includes(key) && value && (typeof value === 'string' ? value.trim() : value.length))
   return (
-    <section className="adm-block">
-      <h3>Candidature Brotherhood</h3>
-      {item.photo ? <img className="adm-portrait" alt="" src={`/api/admin/registrations/${item.id}/photo`} /> : null}
-      <dl className="adm-facts">
-        <div>
-          <dt>Âge</dt>
-          <dd>{item.age || '—'}</dd>
+    <>
+      <section className="adm-block">
+        <h3>{a('detail.answers')}</h3>
+        <div className="bh-answers">
+          <article>
+            <p className="bh-q">{a('detail.motivation')}</p>
+            <p className="bh-a">{item.motivation || a('detail.noEmail')}</p>
+          </article>
+          <article>
+            <p className="bh-q">{a('detail.contribution')}</p>
+            <p className="bh-a">{item.contribution || a('detail.noEmail')}</p>
+          </article>
+          {MISSIONS.filter((key) => challenges[key]).map((key) => (
+            <article key={key}>
+              <p className="bh-kicker">{a(`detail.missionTitles.${key}`)}</p>
+              <p className="bh-q">{a(`detail.missions.${key}`)}</p>
+              <p className="bh-a">{answerText(challenges[key])}</p>
+            </article>
+          ))}
+          {extras.map(([key, value]) => (
+            <article key={key}>
+              <p className="bh-q">{LEGACY[key] || key}</p>
+              <p className="bh-a">{answerText(value)}</p>
+            </article>
+          ))}
+          {item.practical ? (
+            <article>
+              <p className="bh-q">Note libre</p>
+              <p className="bh-a">{item.practical}</p>
+            </article>
+          ) : null}
         </div>
-        <div>
-          <dt>Pôles</dt>
-          <dd>{(item.squads || []).join(', ') || '—'}</dd>
+      </section>
+      <section className="adm-block">
+        <label className="adm-wa-label" htmlFor="adm-notes">
+          Notes de lecture
+        </label>
+        <textarea id="adm-notes" className="adm-wa-message" rows={4} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} />
+        <div className="adm-actions">
+          <button type="button" className="btn btn-sm btn-ghost" onClick={save} disabled={state === 'saving'}>
+            {state === 'saving' ? '…' : 'Enregistrer la note'}
+          </button>
         </div>
-        <div className="is-wide">
-          <dt>Établissement</dt>
-          <dd>{item.organization || '—'}</dd>
-        </div>
-        <div className="is-wide">
-          <dt>Domaine</dt>
-          <dd>{item.domain || '—'}</dd>
-        </div>
-        <div className="is-wide">
-          <dt>Motivation</dt>
-          <dd style={{ whiteSpace: 'pre-wrap' }}>{item.motivation || '—'}</dd>
-        </div>
-        <div className="is-wide">
-          <dt>Apport</dt>
-          <dd style={{ whiteSpace: 'pre-wrap' }}>{item.contribution || '—'}</dd>
-        </div>
-        {challengeLines.map(([key, value]) => (
-          <div className="is-wide" key={key}>
-            <dt>{challengeLabel[key] || key}</dt>
-            <dd style={{ whiteSpace: 'pre-wrap' }}>{Array.isArray(value) ? value.join(' · ') : value}</dd>
-          </div>
-        ))}
-        {item.practical ? (
-          <div className="is-wide">
-            <dt>Note libre</dt>
-            <dd style={{ whiteSpace: 'pre-wrap' }}>{item.practical}</dd>
-          </div>
+        {state === 'saved' ? <p role="status">Note enregistrée.</p> : null}
+        {state === 'error' ? (
+          <p role="alert" className="adm-alert">
+            La note n’a pas été enregistrée.
+          </p>
         ) : null}
-      </dl>
-      <label className="adm-wa-label" htmlFor="adm-notes">
-        Notes de lecture
-      </label>
-      <textarea id="adm-notes" className="adm-wa-message" rows={4} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} />
-      <div className="adm-actions">
-        <button type="button" className="btn btn-sm btn-ghost" onClick={save} disabled={state === 'saving'}>
-          {state === 'saving' ? '…' : 'Enregistrer la note'}
-        </button>
-      </div>
-      {state === 'saved' ? <p role="status">Note enregistrée.</p> : null}
-      {state === 'error' ? (
-        <p role="alert" className="adm-alert">
-          La note n’a pas été enregistrée.
-        </p>
-      ) : null}
-    </section>
+      </section>
+    </>
   )
 }
 const ACTION_ORDER = ['approved', 'active', 'completed', 'pending', 'rejected']
@@ -298,15 +304,22 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
           </div>
         ) : (
           <div className="adm-drawer-body" key={item.id}>
-            <section className="adm-profile">
-              <Avatar item={item} size="lg" />
-              <div>
-                <h2 id="adm-drawer-title" dir="auto">
-                  {fullName(item)}
-                </h2>
-                <p dir="auto">{item.city}</p>
+            <section className="bh-profile">
+              <div className="bh-profile-cover" aria-hidden="true" />
+              <div className="bh-profile-id">
+                <Avatar item={item} size="xl" />
+                <div>
+                  <h2 id="adm-drawer-title" dir="auto">
+                    {fullName(item)}
+                  </h2>
+                  <p dir="auto">{[item.gender ? a(`genders.${item.gender}`) : null, item.city].filter(Boolean).join(' · ')}</p>
+                  <p>{formatDateTime(item.createdAt, locale)}</p>
+                </div>
+                <div className="bh-profile-status">
+                  <span>{a('detail.stage')}</span>
+                  <StatusPill status={item.status} />
+                </div>
               </div>
-              <StatusPill status={item.status} />
             </section>
 
             {item.kind === 'membership' ? (
@@ -374,6 +387,38 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
                   <dt>{a('detail.city')}</dt>
                   <dd dir="auto">{item.city}</dd>
                 </div>
+                <div>
+                  <dt>{a('detail.gender')}</dt>
+                  <dd>{item.gender ? a(`genders.${item.gender}`) : a('detail.noEmail')}</dd>
+                </div>
+                {item.age ? (
+                  <div>
+                    <dt>{a('detail.age')}</dt>
+                    <dd>{item.age}</dd>
+                  </div>
+                ) : null}
+                {item.organization ? (
+                  <div className="is-wide">
+                    <dt>{a('detail.organization')}</dt>
+                    <dd dir="auto">{item.organization}</dd>
+                  </div>
+                ) : null}
+                {item.domain ? (
+                  <div className="is-wide">
+                    <dt>{a('detail.domain')}</dt>
+                    <dd dir="auto">{item.domain}</dd>
+                  </div>
+                ) : null}
+                {item.squads?.length ? (
+                  <div className="is-wide">
+                    <dt>{a('detail.squads')}</dt>
+                    <dd className="bh-squads">
+                      {item.squads.map((id) => (
+                        <span key={id}>{a(`squads.${id}`)}</span>
+                      ))}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="is-wide">
                   <dt>{a('detail.email')}</dt>
                   <dd>

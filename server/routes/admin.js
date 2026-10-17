@@ -244,14 +244,32 @@ const buildFilter = (query, { withStatus = true } = {}) => {
   if (withStatus && STATUSES.includes(status)) filter.status = status
   if (OFFER_IDS.includes(offer)) filter.offer = offer
   if (DURATIONS.includes(duration)) filter.duration = duration
+  const gender = param(query.gender)
+  const squad = param(query.squad)
+  if (gender === 'homme' || gender === 'femme') filter.gender = gender
+  if (['communication', 'design', 'photo', 'events', 'partners'].includes(squad)) filter.squads = squad
+  const from = parseDay(param(query.from), false)
+  const to = parseDay(param(query.to), true)
+  if (from || to) {
+    filter.createdAt = {}
+    if (from) filter.createdAt.$gte = from
+    if (to) filter.createdAt.$lte = to
+  }
   const terms = param(query.q).trim().slice(0, 80).split(/\s+/).filter(Boolean).slice(0, 5)
   if (terms.length) {
     filter.$and = terms.map((term) => {
       const pattern = new RegExp(escapeRegex(term), 'i')
-      return { $or: [{ firstName: pattern }, { lastName: pattern }, { city: pattern }, { email: pattern }, { phone: pattern }] }
+      return { $or: [{ firstName: pattern }, { lastName: pattern }, { city: pattern }, { email: pattern }, { phone: pattern }, { organization: pattern }, { domain: pattern }] }
     })
   }
   return filter
+}
+
+const parseDay = (value, end) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0, end ? 999 : 0)
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null
 }
 
 const recruitment = async (req, res, next) => {

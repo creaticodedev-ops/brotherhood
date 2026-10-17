@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
-import { formatCount, formatDateTime, formatMoney, fullName } from './format'
+import { formatClock, formatCount, formatDate, formatMoney, fullName } from './format'
 import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon } from './icons'
 import { STATUS_ORDER } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
@@ -10,17 +10,25 @@ import { confirmationMessage, openWhatsApp } from './whatsapp'
 
 const OFFERS = ['essential', 'advanced', 'premium']
 const DURATIONS = ['15d', '1m']
+const GENDERS = ['homme', 'femme']
+const SQUADS = ['communication', 'design', 'photo', 'events', 'partners']
 const PAGE_SIZES = [20, 50, 100]
 const SEARCH_DELAY = 250
+const SORTS = [
+  { id: 'createdAt:desc', key: 'createdAt', order: 'desc', label: 'sortNewest' },
+  { id: 'createdAt:asc', key: 'createdAt', order: 'asc', label: 'sortOldest' },
+  { id: 'name:asc', key: 'name', order: 'asc', label: 'sortName' },
+  { id: 'name:desc', key: 'name', order: 'desc', label: 'sortNameDesc' },
+  { id: 'status:asc', key: 'status', order: 'asc', label: 'sortStatus' },
+]
 
 const COLUMNS = [
-  { key: 'applicant', sort: 'name' },
-  { key: 'city', sort: 'city' },
-  { key: 'amount', sort: 'amount', numeric: true },
-  { key: 'duration' },
-  { key: 'offer' },
-  { key: 'date', sort: 'createdAt' },
-  { key: 'status', sort: 'status' },
+  { key: 'applicant', sort: 'name', col: 'who' },
+  { key: 'gender', col: 'gender' },
+  { key: 'city', sort: 'city', col: 'city' },
+  { key: 'squad', col: 'squad' },
+  { key: 'date', sort: 'createdAt', col: 'date' },
+  { key: 'status', sort: 'status', col: 'status' },
 ]
 
 const useDebounced = (value, ms) => {
@@ -39,6 +47,10 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
   const [status, setStatus] = useState('')
   const [offer, setOffer] = useState('')
   const [duration, setDuration] = useState('')
+  const [gender, setGender] = useState('')
+  const [squad, setSquad] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [sort, setSort] = useState({ key: 'createdAt', order: 'desc' })
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(PAGE_SIZES[0])
@@ -52,7 +64,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
 
   useEffect(() => {
     setPage(1)
-  }, [q, status, offer, duration, sort, limit])
+  }, [q, status, offer, duration, gender, squad, from, to, sort, limit])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -62,6 +74,10 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
     if (status) params.status = status
     if (offer) params.offer = offer
     if (duration) params.duration = duration
+    if (gender) params.gender = gender
+    if (squad) params.squad = squad
+    if (from) params.from = from
+    if (to) params.to = to
     adminApi
       .applications(params, controller.signal)
       .then((result) => {
@@ -75,7 +91,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
         setLoading(false)
       })
     return () => controller.abort()
-  }, [q, status, offer, duration, sort, page, limit, version, attempt])
+  }, [q, status, offer, duration, gender, squad, from, to, sort, page, limit, version, attempt])
 
   const toggleSort = (key) =>
     setSort((prev) => (prev.key === key ? { key, order: prev.order === 'asc' ? 'desc' : 'asc' } : { key, order: key === 'name' || key === 'city' ? 'asc' : 'desc' }))
@@ -108,12 +124,18 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
 
   const counts = data?.counts || {}
   const allCount = STATUS_ORDER.reduce((sum, key) => sum + (counts[key] || 0), 0)
-  const filtered = Boolean(q || status || offer || duration)
+  const filtered = Boolean(q || status || offer || duration || gender || squad || from || to)
+  const sortId = `${sort.key}:${sort.order}`
   const reset = () => {
     setQuery('')
     setStatus('')
     setOffer('')
     setDuration('')
+    setGender('')
+    setSquad('')
+    setFrom('')
+    setTo('')
+    setSort({ key: 'createdAt', order: 'desc' })
   }
 
   return (
@@ -138,6 +160,16 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
           ) : null}
         </label>
         <div className="adm-selects">
+          <select value={sortId} onChange={(event) => {
+            const next = SORTS.find((item) => item.id === event.target.value)
+            if (next) setSort({ key: next.key, order: next.order })
+          }} aria-label={a('table.sort')}>
+            {SORTS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {a(`table.${item.label}`)}
+              </option>
+            ))}
+          </select>
           <select value={offer} onChange={(event) => setOffer(event.target.value)} aria-label={a('table.offer')}>
             <option value="">{a('table.allOffers')}</option>
             {OFFERS.map((id) => (
@@ -155,6 +187,39 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="adm-filters">
+        <label>
+          <span>{a('table.gender')}</span>
+          <select value={gender} onChange={(event) => setGender(event.target.value)}>
+            <option value="">{a('table.allGenders')}</option>
+            {GENDERS.map((id) => (
+              <option key={id} value={id}>
+                {a(`genders.${id}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{a('table.squad')}</span>
+          <select value={squad} onChange={(event) => setSquad(event.target.value)}>
+            <option value="">{a('table.allSquads')}</option>
+            {SQUADS.map((id) => (
+              <option key={id} value={id}>
+                {a(`squads.${id}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{a('table.from')}</span>
+          <input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} />
+        </label>
+        <label>
+          <span>{a('table.to')}</span>
+          <input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} />
+        </label>
       </div>
 
       <div className="adm-chips" role="group" aria-label={a('table.statusFilter')}>
@@ -199,7 +264,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                     <th
                       key={column.key}
                       scope="col"
-                      className={column.numeric ? 'is-num' : undefined}
+                      className={`adm-col-${column.col}`}
                       aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
                     >
                       {column.sort ? (
@@ -213,7 +278,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                     </th>
                   )
                 })}
-                <th scope="col" className="is-actions">
+                <th scope="col" className="adm-col-actions is-actions">
                   <span className="sr-only">{a('table.actions')}</span>
                 </th>
               </tr>
@@ -228,6 +293,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                         type="button"
                         className="adm-name"
                         dir="auto"
+                        title={fullName(item)}
                         onClick={(event) => {
                           event.stopPropagation()
                           onOpen(item.id)
@@ -235,21 +301,35 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                       >
                         {fullName(item)}
                       </button>
-                      <span className="adm-sub" dir="ltr">
+                      <span className="adm-sub" dir="ltr" title={item.email || undefined}>
                         {item.email || a('detail.noEmail')}
                       </span>
+                      {item.phone ? (
+                        <span className="adm-sub" dir="ltr">
+                          {item.phone}
+                        </span>
+                      ) : null}
                     </span>
                   </td>
+                  <td data-label={a('table.gender')}>{item.gender ? a(`genders.${item.gender}`) : '—'}</td>
                   <td data-label={a('table.city')} dir="auto">
                     {item.city}
                   </td>
-                  <td data-label={a('table.amount')} className="is-num adm-amount" dir="ltr">
-                    {item.kind === 'membership' ? (item.squads || []).join(' · ') || '—' : formatMoney(item.amount, locale, item.currency)}
+                  <td className="adm-cell-squad" data-label={item.kind === 'membership' ? a('table.squad') : a('table.offer')}>
+                    {item.kind === 'membership' ? (
+                      (item.squads || []).map((id) => a(`squads.${id}`)).join(' · ') || '—'
+                    ) : (
+                      <span className="adm-stack">
+                        <span>{t(`offers.items.${item.offer}.name`)}</span>
+                        <span className="adm-sub" dir="ltr">
+                          {formatMoney(item.amount, locale, item.currency)} · {t(`register.durations.${item.duration}`)}
+                        </span>
+                      </span>
+                    )}
                   </td>
-                  <td data-label={a('table.duration')}>{item.kind === 'membership' ? item.age ?? '—' : t(`register.durations.${item.duration}`)}</td>
-                  <td data-label={a('table.offer')}>{item.kind === 'membership' ? a('overview.membership') : t(`offers.items.${item.offer}.name`)}</td>
                   <td data-label={a('table.date')} className="adm-date">
-                    {formatDateTime(item.createdAt, locale)}
+                    <span>{formatDate(item.createdAt, locale)}</span>
+                    <span className="adm-sub">{formatClock(item.createdAt, locale)}</span>
                   </td>
                   <td data-label={a('table.status')}>
                     <StatusPill status={item.status} />
