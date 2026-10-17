@@ -6,7 +6,10 @@ import { Home } from './Home'
 import { Join } from './Join'
 import { Recruit } from './Recruit'
 import { About, Archive, Creative, NotFound, Privacy, SocialPage, StoryPage } from './Pages'
+import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { Footer, Nav, useCopy } from './ui'
+
+const OPEN_DURING_LAUNCH = new Set(['recruit', 'join', 'privacy'])
 
 const match = (pathname) => {
   const path = pathname.replace(/\/+$/, '') || '/'
@@ -36,6 +39,14 @@ export const SiteApp = () => {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  const launchGate = MEMBERSHIP_LAUNCH && !OPEN_DURING_LAUNCH.has(route.name)
+
+  useEffect(() => {
+    if (!launchGate) return
+    window.history.replaceState(null, '', '/recruit')
+    setRoute(match('/recruit'))
+  }, [launchGate])
+
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [route.path])
@@ -50,7 +61,7 @@ export const SiteApp = () => {
   if (route.name === 'social') page = <SocialPage />
   if (route.name === 'join') page = <Join />
   if (route.name === 'privacy') page = <Privacy />
-  if (route.name === 'recruit') {
+  if (route.name === 'recruit' || launchGate) {
     return (
       <div className="bh">
         <a className="skip-link" href="#main">
@@ -59,6 +70,7 @@ export const SiteApp = () => {
         <main id="main" tabIndex={-1}>
           <Recruit />
         </main>
+        <Footer />
       </div>
     )
   }

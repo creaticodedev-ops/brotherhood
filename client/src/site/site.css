@@ -4,6 +4,15 @@
   animation: fade 0.45s var(--ease) both;
 }
 
+.nav.is-launch .nav-actions {
+  margin-inline-start: auto;
+}
+
+.foot {
+  position: relative;
+  z-index: 1;
+}
+
 .nav-links > a[aria-current='page'],
 .menu-links a[aria-current='page'] {
   color: var(--white);

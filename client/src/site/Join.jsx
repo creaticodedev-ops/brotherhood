@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nProvider'
 import { DEFAULT_COUNTRY, parsePhone } from '../landing/overlays/phone'
 import { PhoneField } from '../landing/overlays/PhoneField'
 import '../landing/overlays/overlays.css'
+import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { submitApplication } from './api'
 import { A, useCopy, usePageMeta } from './ui'
 
@@ -285,7 +286,7 @@ export const Join = () => {
         <p>
           {copy.reference}: <strong dir="ltr">{reference}</strong>
         </p>
-        <A className="btn btn-primary" href="/">
+        <A className="btn btn-primary" href={MEMBERSHIP_LAUNCH ? '/recruit' : '/'}>
           {copy.again}
         </A>
         </div>

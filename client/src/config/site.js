@@ -62,6 +62,12 @@ const httpsUrl = (value) => {
 /** Official accounts. A network without a configured https:// URL is shown as "coming soon", never linked. */
 export const SOCIAL_LINKS = ['instagram', 'facebook', 'tiktok'].map((key) => ({ key, url: httpsUrl(SITE.social[key]) }))
 
+/**
+ * Temporary public launch. Visitors only see membership registration.
+ * Set this to false to restore the full public navigation and pages.
+ */
+export const MEMBERSHIP_LAUNCH = true
+
 /** Where "Commencer" leads until registration exists. */
 export const START_TARGET = 'offers'
 

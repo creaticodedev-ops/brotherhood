@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LOCALES } from '../i18n/locales'
 import { useI18n } from '../i18n/I18nProvider'
-import { SOCIAL_LINKS } from '../config/site'
+import { MEMBERSHIP_LAUNCH, SOCIAL_LINKS } from '../config/site'
 import { categoryLabel, storyPath } from '../../../shared/catalog.js'
 import { ArrowIcon, Logo } from '../landing/ui'
 import { COPY } from './copy'
@@ -95,20 +95,24 @@ export const Nav = ({ path }) => {
     }
   }, [open])
 
+  const home = MEMBERSHIP_LAUNCH ? '/recruit' : '/'
+
   return (
     <>
-      <header className={`nav${solid || open ? ' is-scrolled' : ''}`}>
+      <header className={`nav${solid || open ? ' is-scrolled' : ''}${MEMBERSHIP_LAUNCH ? ' is-launch' : ''}`}>
         <div className="container nav-inner">
-          <A className="nav-logo" href="/" aria-label="The Brotherhood">
+          <A className="nav-logo" href={home} aria-label="The Brotherhood">
             <Logo eager />
           </A>
-          <nav className="nav-links" aria-label={pack.nav.primary}>
-            {NAV.map(([href, key]) => (
-              <A key={href} href={href} aria-current={currentOf(path, href) ? 'page' : undefined}>
-                {pack.nav[key]}
-              </A>
-            ))}
-          </nav>
+          {MEMBERSHIP_LAUNCH ? null : (
+            <nav className="nav-links" aria-label={pack.nav.primary}>
+              {NAV.map(([href, key]) => (
+                <A key={href} href={href} aria-current={currentOf(path, href) ? 'page' : undefined}>
+                  {pack.nav[key]}
+                </A>
+              ))}
+            </nav>
+          )}
           <div className="nav-actions">
             <div className="lang nav-lang" role="group" aria-label={pack.a11y.lang}>
               {LOCALES.map((item) => (
@@ -133,7 +137,7 @@ export const Nav = ({ path }) => {
       {open ? (
         <div className="menu is-open" role="dialog" aria-modal="true" aria-label={pack.nav.primary}>
           <div className="container menu-top">
-            <A className="menu-logo" href="/" aria-label="The Brotherhood">
+            <A className="menu-logo" href={home} aria-label="The Brotherhood">
               <Logo />
             </A>
             <button type="button" className="icon-btn" aria-label={pack.nav.close} onClick={() => setOpen(false)}>
@@ -145,17 +149,19 @@ export const Nav = ({ path }) => {
           </div>
           <div className="container menu-body">
             <ol className="menu-links">
-              {NAV.map(([href, key], index) => (
-                <li key={href} style={{ '--i': index }}>
-                  <A href={href} aria-current={currentOf(path, href) ? 'page' : undefined}>
-                    <span className="menu-index">{String(index + 1).padStart(2, '0')}</span>
-                    {pack.nav[key]}
-                  </A>
-                </li>
-              ))}
-              <li style={{ '--i': NAV.length }}>
+              {MEMBERSHIP_LAUNCH
+                ? null
+                : NAV.map(([href, key], index) => (
+                    <li key={href} style={{ '--i': index }}>
+                      <A href={href} aria-current={currentOf(path, href) ? 'page' : undefined}>
+                        <span className="menu-index">{String(index + 1).padStart(2, '0')}</span>
+                        {pack.nav[key]}
+                      </A>
+                    </li>
+                  ))}
+              <li style={{ '--i': MEMBERSHIP_LAUNCH ? 0 : NAV.length }}>
                 <A href="/join" aria-current={path === '/join' ? 'page' : undefined}>
-                  <span className="menu-index">{String(NAV.length + 1).padStart(2, '0')}</span>
+                  <span className="menu-index">{String((MEMBERSHIP_LAUNCH ? 0 : NAV.length) + 1).padStart(2, '0')}</span>
                   {pack.nav.join}
                 </A>
               </li>
@@ -176,12 +182,13 @@ export const Nav = ({ path }) => {
 
 export const Footer = () => {
   const { pack } = useCopy()
+  const home = MEMBERSHIP_LAUNCH ? '/recruit' : '/'
   return (
     <footer className="foot">
       <div className="container">
         <div className="foot-top">
           <div className="foot-brand">
-            <A className="foot-logo" href="/" aria-label="The Brotherhood">
+            <A className="foot-logo" href={home} aria-label="The Brotherhood">
               <Logo />
             </A>
             <p>{pack.footer.lead}</p>
@@ -192,11 +199,13 @@ export const Footer = () => {
           <div className="foot-col">
             <h3>{pack.footer.explore}</h3>
             <ul className="foot-list">
-              {NAV.map(([href, key]) => (
-                <li key={href}>
-                  <A href={href}>{pack.nav[key]}</A>
-                </li>
-              ))}
+              {MEMBERSHIP_LAUNCH
+                ? null
+                : NAV.map(([href, key]) => (
+                    <li key={href}>
+                      <A href={href}>{pack.nav[key]}</A>
+                    </li>
+                  ))}
               <li>
                 <A href="/join">{pack.nav.join}</A>
               </li>
@@ -229,9 +238,11 @@ export const Footer = () => {
         </div>
         <div className="foot-bottom">
           <span>{pack.footer.rights}</span>
-          <a className="foot-admin" href="/admin">
-            {pack.footer.admin}
-          </a>
+          {MEMBERSHIP_LAUNCH ? null : (
+            <a className="foot-admin" href="/admin">
+              {pack.footer.admin}
+            </a>
+          )}
         </div>
       </div>
     </footer>

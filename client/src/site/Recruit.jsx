@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { LOCALES } from '../i18n/locales'
 import { useReveal } from '../landing/hooks'
 import { ArrowIcon, Logo } from '../landing/ui'
-import { A, SocialRow, useCopy, usePageMeta } from './ui'
+import { A, useCopy, usePageMeta } from './ui'
 import './recruit.css'
 
 const HERO_PHOTO = '/media/night-gathering.jpg'
@@ -269,18 +269,6 @@ export const Recruit = () => {
         </div>
       </section>
 
-      <footer className="recruit-foot">
-        <div className="container">
-          <A className="recruit-foot-logo" href="/recruit" aria-label="The Brotherhood">
-            <Logo />
-          </A>
-          <p className="recruit-slogan"><bdi dir="ltr">Every Warrior Has a Story.</bdi></p>
-          <p>{copy.closeNote}</p>
-          <h2 className="recruit-follow">{pack.footer.follow}</h2>
-          <SocialRow pack={pack.social} compact withIcons />
-          <small>{pack.footer.rights}</small>
-        </div>
-      </footer>
     </div>
   )
 }
