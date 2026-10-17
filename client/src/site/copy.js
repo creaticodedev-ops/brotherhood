@@ -78,7 +78,7 @@ export const COPY = {
       closeLead: 'Une idée, de l’énergie à partager, ou l’envie de faire une différence ? Faites le premier pas et rejoignez THE BROTHERHOOD.',
       closeNote: 'Chaque guerrier a une histoire.',
       photoGathering: 'Grand groupe de Brotherhood posant de nuit derrière la banderole.',
-      photoTeam: 'Équipes et membres de Brotherhood posant sur un terrain.',
+      photoTeam: 'Membres de The Brotherhood réunis sur scène, les mains levées.',
     },
     home: {
       kicker: 'Asfi',
@@ -435,7 +435,7 @@ export const COPY = {
       closeLead: 'Have an idea, energy to share, or the desire to make a difference? Take the first step and become part of THE BROTHERHOOD.',
       closeNote: 'A youth community in Asfi, since 2019.',
       photoGathering: 'A large Brotherhood group posing at night behind their banner.',
-      photoTeam: 'Brotherhood teams and members posing on a field.',
+      photoTeam: 'Members of The Brotherhood gathered on stage with their hands raised.',
     },
     home: {
       kicker: 'Safi',
@@ -792,7 +792,7 @@ export const COPY = {
       closeLead: 'هل أنت مستعد للانضمام إلينا؟ إذا كانت لديك فكرة، أو طاقة تود مشاركتها، أو رغبة في أن تُحدِث فرقًا، فهذه هي خطوتك الأولى.',
       closeNote: 'لكل محارب قصة.',
       photoGathering: 'مجموعة كبيرة من The Brotherhood في صورة ليلية خلف اللافتة.',
-      photoTeam: 'فرق وأعضاء The Brotherhood في صورة جماعية على أرض الملعب.',
+      photoTeam: 'أعضاء The Brotherhood مجتمعون على الخشبة وأيديهم مرفوعة.',
     },
     home: {
       kicker: 'آسفي',

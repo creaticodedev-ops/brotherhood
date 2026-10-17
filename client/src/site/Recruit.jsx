@@ -208,21 +208,23 @@ export const Recruit = () => {
         </div>
       </section>
 
-      <section className="section is-light" id="group">
+      <section className="section is-light recruit-group" id="group">
         <div className="container recruit-about">
-          <div data-reveal>
+          <div className="recruit-about-copy" data-reveal>
             <p className="kicker">{copy.aboutKicker}</p>
             <h2 className="h2">{copy.aboutTitle}</h2>
             <p className="recruit-founded">{copy.aboutFounded}</p>
+          </div>
+          <figure className="recruit-about-photo" data-reveal>
+            <img src="/media/stage-gathering.jpg" alt={copy.photoTeam} width="1024" height="683" decoding="async" />
+          </figure>
+          <div className="recruit-about-body" data-reveal>
             {copy.about.map((paragraph) => (
               <p key={paragraph} className="lead">
                 {paragraph}
               </p>
             ))}
           </div>
-          <figure data-reveal>
-            <img src="/media/sports-team.jpg" alt={copy.photoTeam} />
-          </figure>
         </div>
       </section>
 
