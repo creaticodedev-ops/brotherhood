@@ -7,7 +7,7 @@ import { Story } from '../models/Story.js'
 import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import { recordAudit } from '../models/AuditEvent.js'
-import { portraitFile } from '../services/portrait.js'
+import { readStoredPortrait, rememberLocalPortrait } from '../services/portrait.js'
 import { commandRouter, loginStaff } from './command.js'
 import {
   adminConfigured,
@@ -372,12 +372,12 @@ adminRouter.get('/registrations/:id/photo', recruitment, async (req, res, next) 
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findById(req.params.id).select('photo').lean()
-    const file = portraitFile(doc?.photo)
-    if (!file) return res.status(404).json({ error: 'Photo not found' })
+    if (!doc) return notFound(res)
+    const stored = (await readStoredPortrait(req.params.id)) || (await rememberLocalPortrait(req.params.id, doc.photo))
+    if (!stored) return res.status(404).json({ error: 'Photo not found' })
     res.set('Cache-Control', 'private, no-store')
-    res.sendFile(file, (error) => {
-      if (error && !res.headersSent) next(error)
-    })
+    res.set('X-Content-Type-Options', 'nosniff')
+    res.type(stored.contentType).send(stored.data)
   } catch (error) {
     next(error)
   }

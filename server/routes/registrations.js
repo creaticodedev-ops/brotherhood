@@ -5,7 +5,7 @@ import { Notification, toNotification } from '../models/Notification.js'
 import { DURATIONS, Registration, toApplication } from '../models/Registration.js'
 import { publish } from '../services/adminEvents.js'
 import { validateMembership } from '../services/membership.js'
-import { savePortrait } from '../services/portrait.js'
+import { removePortrait, savePortrait } from '../services/portrait.js'
 import { loadRegistrationWindow, toPublicWindow } from '../services/registrationWindow.js'
 
 export const registrationsRouter = Router()
@@ -114,7 +114,9 @@ registrationsRouter.post('/', async (req, res, next) => {
         doc.photo = await savePortrait(doc.id, photo)
         await doc.save()
       } catch (error) {
-        await Registration.deleteOne({ _id: doc._id })
+        console.error('[portrait] Not stored; the application was withdrawn so the visitor can retry')
+        await removePortrait(doc.id).catch(() => {})
+        await Registration.deleteOne({ _id: doc._id }).catch(() => {})
         throw error
       }
     }
