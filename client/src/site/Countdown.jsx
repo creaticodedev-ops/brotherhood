@@ -89,7 +89,7 @@ export const RegistrationClock = ({ state, copy, children, onElapsed, plain = fa
   return (
     <section className={plain ? 'clock is-plain' : 'clock'} aria-label={headline}>
       <p className="clock-kicker">{copy.kicker}</p>
-      <h2 className="clock-title">{headline}</h2>
+      <p className="clock-title">{headline}</p>
       <p className="clock-message">{copy[messageKey(state)]}</p>
       {state.showCountdown ? (
         <ol className="clock-grid">

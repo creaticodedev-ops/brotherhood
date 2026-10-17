@@ -1,96 +1,147 @@
-.clock {
-  width: min(100%, 640px);
-  margin: 0 0 28px;
-  padding: 22px 22px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(5, 6, 5, 0.62);
+section.clock {
+  width: min(100%, 28rem);
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #fff;
 }
 
-.clock-kicker,
-.clock-unit {
+section.clock p.clock-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.6875rem;
+  color: var(--green-bright);
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.16em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
-.clock-title {
+section.clock p.clock-kicker::before {
+  content: '';
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+}
+
+section.clock p.clock-title {
+  max-width: none;
   margin: 8px 0 0;
+  color: #fff;
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.05;
+  line-height: 1.15;
 }
 
-.clock-message {
-  margin: 10px 0 0;
-  max-width: 36em;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 0.95rem;
-  line-height: 1.5;
+section.clock p.clock-message {
+  max-width: 28rem;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
 }
 
-.clock-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 18px 0 0;
+section.clock .clock-grid {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  max-width: 100%;
+  margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
 
-.clock-grid li {
+section.clock .clock-grid li {
+  display: grid;
+  justify-items: center;
   min-width: 0;
-  padding: 12px 6px 10px;
-  border-top: 2px solid var(--green);
-  background: rgba(255, 255, 255, 0.04);
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   text-align: center;
 }
 
-.clock-value {
+section.clock .clock-grid li:first-child {
+  padding-inline-start: 0;
+}
+
+section.clock .clock-grid li + li {
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+section.clock .clock-value {
   display: block;
+  min-width: 2.4ch;
+  color: #fff;
   font-family: var(--font-display);
-  font-size: clamp(1.65rem, 4vw, 2.4rem);
+  font-size: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
   line-height: 1;
 }
 
-.clock-unit {
+section.clock .clock-unit {
   display: block;
-  margin-top: 8px;
-  overflow-wrap: anywhere;
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.clock .btn {
-  margin-top: 18px;
+@media (min-width: 768px) {
+  section.clock {
+    margin-bottom: 22px;
+  }
+
+  section.clock p.clock-title {
+    font-size: 1.2rem;
+  }
+
+  section.clock .clock-value {
+    font-size: 1.5rem;
+  }
+
+  section.clock .clock-grid li {
+    padding-inline: 0.9rem;
+  }
 }
 
-html[lang='ar'] .clock-kicker,
-html[lang='ar'] .clock-unit,
-html[lang='ar'] .clock-title {
+@media (max-width: 340px) {
+  section.clock .clock-grid li {
+    padding-inline: 0.45rem;
+  }
+
+  section.clock .clock-value {
+    font-size: 1.125rem;
+  }
+
+  section.clock .clock-unit {
+    letter-spacing: 0.06em;
+  }
+}
+
+html[lang='ar'] section.clock :is(.clock-kicker, .clock-title, .clock-unit) {
+  font-family: var(--font-arabic);
   letter-spacing: 0;
   text-transform: none;
-  font-family: var(--font-arabic);
-}
-
-@media (max-width: 640px) {
-  .clock {
-    padding: 18px 14px 14px;
-  }
-
-  .clock-grid {
-    gap: 6px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .clock-value {
+  section.clock .clock-value {
     transition: none;
   }
 }

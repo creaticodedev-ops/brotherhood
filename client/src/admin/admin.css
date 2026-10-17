@@ -3628,16 +3628,6 @@ html[lang='ar'] .adm-notes-head h2 {
 .adm-window .clock.is-plain {
   width: 100%;
   margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.adm-window .clock-grid li {
-  border: 1px solid var(--line);
-  border-top: 2px solid var(--green);
-  border-radius: 14px;
-  background: var(--surface);
 }
 
 @media (max-width: 640px) {
