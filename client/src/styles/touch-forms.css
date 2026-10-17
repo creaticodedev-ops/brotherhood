@@ -2,6 +2,18 @@
    Desktop type sizes stay unchanged. Pinch zoom stays available. */
 
 @media (max-width: 1024px), ((hover: none) and (pointer: coarse)) {
+  /* Smooth scrolling fights the browser's focus scroll and can leave the page offset
+     after the keyboard closes. overflow-x: clip on the root turns the page into a
+     scroll container and is the other cause of that stuck offset on iOS. */
+  html {
+    scroll-behavior: auto;
+  }
+
+  html,
+  body {
+    overflow-x: visible;
+  }
+
   :is(input, textarea, select):not(
     [type='checkbox'],
     [type='radio'],
@@ -18,12 +30,42 @@
     font-size: 16px;
     line-height: 1.4;
     scroll-margin-top: calc(var(--nav-h, 72px) + env(safe-area-inset-top, 0px) + 12px);
-    scroll-margin-bottom: 24px;
+    scroll-margin-bottom: max(24px, 18dvh);
+  }
+
+  /* Keep the join photograph on the large viewport so the keyboard does not squash it. */
+  .join-bg {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: 100%;
+    height: 100lvh;
   }
 
   .nav {
     height: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .lang-btn,
+  .phone-country,
+  .foot-admin,
+  .adm-login-alt,
+  .adm-reveal,
+  .adm-login details.adm-login-alt > summary {
+    min-height: 44px;
+  }
+
+  .adm-login details.adm-login-alt > summary {
+    display: flex;
+    align-items: center;
+  }
+
+  .foot-list a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   .foot {

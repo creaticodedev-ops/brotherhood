@@ -325,6 +325,21 @@
   text-decoration-color: var(--green-bright);
 }
 
+.adm-login .adm-wa-label input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--white);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: inherit;
+}
+
 .adm-login-note {
   padding: 14px 16px;
   border: 1px solid rgba(34, 181, 115, 0.32);
