@@ -8,14 +8,14 @@ import './recruit.css'
 const HERO_PHOTO = '/media/night-gathering.jpg'
 const JOIN_AUDIO = '/media/brotherhood.mp4'
 
-const Plate = ({ alt = '', priority = false }) => (
+const Plate = ({ alt = '', priority = false, src = HERO_PHOTO, width = 1024, height = 768 }) => (
   <>
     <img
       className="recruit-plate"
-      src={HERO_PHOTO}
+      src={src}
       alt={alt}
-      width={1024}
-      height={768}
+      width={width}
+      height={height}
       decoding="async"
       fetchPriority={priority ? 'high' : 'auto'}
       loading={priority ? 'eager' : 'lazy'}
@@ -257,7 +257,7 @@ export const Recruit = () => {
       </section>
 
       <section className="recruit-apply" id="apply">
-        <Plate />
+        <Plate src="/media/safi-heart.jpg" width={1024} height={691} />
         <div className="container recruit-apply-copy" data-reveal>
           <p className="kicker">THE BROTHERHOOD</p>
           <h2 dir={locale === 'ar' ? 'rtl' : 'ltr'}>{copy.closeTitle}</h2>

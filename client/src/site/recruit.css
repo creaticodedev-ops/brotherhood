@@ -228,6 +228,10 @@
   isolation: isolate;
 }
 
+.recruit-apply .recruit-plate {
+  object-position: center center;
+}
+
 .recruit-apply-copy {
   max-width: 820px;
 }
@@ -290,6 +294,10 @@
 @media (prefers-reduced-motion: reduce) {
   .recruit-plate {
     object-position: center 30%;
+  }
+
+  .recruit-apply .recruit-plate {
+    object-position: center center;
   }
 }
 
