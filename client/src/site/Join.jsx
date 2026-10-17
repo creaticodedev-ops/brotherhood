@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
-import { DEFAULT_COUNTRY, parsePhone } from '../landing/overlays/phone'
+import { DEFAULT_COUNTRY, dialCode, parsePhone } from '../landing/overlays/phone'
 import { PhoneField } from '../landing/overlays/PhoneField'
 import '../landing/overlays/overlays.css'
 import { MEMBERSHIP_LAUNCH } from '../config/site'
@@ -85,6 +85,124 @@ const JoinSound = () => {
   }, [])
 
   return <audio ref={mediaRef} className="join-audio" src={JOIN_AUDIO} preload="auto" autoPlay />
+}
+
+const initial = (value) => Array.from(String(value || '').trim())[0] || ''
+
+const filled = (value) => String(value || '').trim()
+
+const Dossier = ({ copy, values, portrait }) => {
+  const phone = filled(values.phone)
+  let phoneLine = phone
+  if (phone && values.phoneCountry) {
+    try {
+      phoneLine = `${dialCode(values.phoneCountry)} ${phone}`
+    } catch {
+      phoneLine = phone
+    }
+  }
+  const facts = [
+    [copy.fields.firstName, values.firstName],
+    [copy.fields.lastName, values.lastName],
+    [copy.fields.gender, copy.genders[values.gender] || ''],
+    [copy.fields.age, values.age],
+    [copy.fields.city, values.city],
+    [copy.fields.email, values.email, 'ltr', true],
+    [copy.fields.phone, phoneLine, 'ltr', true],
+    [copy.fields.organization, values.organization, 'auto', true],
+    [copy.fields.domain, values.domain, 'auto', true],
+  ].filter(([, value]) => filled(value))
+  const answers = [
+    [copy.fields.motivation, values.motivation],
+    [copy.fields.contribution, values.contribution],
+  ].filter(([, answer]) => filled(answer))
+  const squads = values.squads.map((id) => copy.squadItems[id]).filter(Boolean)
+  const meta = [copy.genders[values.gender], filled(values.age), filled(values.city)].filter(Boolean).join(' · ')
+
+  return (
+    <section className="dossier" aria-labelledby="dossier-name">
+      <p className="bh-hint">{copy.review}</p>
+      <div className="dossier-sheet">
+        <div className="dossier-cover" aria-hidden="true" />
+        <div className="dossier-id">
+          <div className="dossier-portrait">
+            {portrait?.url ? <img src={portrait.url} alt="" /> : <span aria-hidden="true">{`${initial(values.firstName)}${initial(values.lastName)}`}</span>}
+          </div>
+          <div className="dossier-name">
+            <p className="kicker">{copy.kicker}</p>
+            <h2 id="dossier-name" dir="auto">{filled(values.firstName)} {filled(values.lastName)}</h2>
+            {meta ? <p dir="auto">{meta}</p> : null}
+          </div>
+          <p className="dossier-mark"><span>{copy.steps[4]}</span></p>
+        </div>
+
+        <div className="dossier-body">
+          <section className="dossier-section">
+            <h3><span>01</span>{copy.steps[0]}</h3>
+            <dl className="dossier-facts">
+              {facts.map(([label, value, direction, wide]) => (
+                <div key={label} className={wide ? 'is-wide' : undefined}>
+                  <dt>{label}</dt>
+                  <dd dir={direction || 'auto'}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {answers.length ? (
+            <section className="dossier-section">
+              <h3><span>02</span>{copy.steps[1]}</h3>
+              <div className="dossier-prose">
+                {answers.map(([label, answer]) => (
+                  <article key={label}>
+                    <h4>{label}</h4>
+                    <p className="dossier-answer" dir="auto">{answer}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {squads.length ? (
+            <section className="dossier-section">
+              <h3><span>03</span>{copy.steps[2]}</h3>
+              <ul className="dossier-squads">
+                {squads.map((item) => (
+                  <li key={item.name}>
+                    <strong dir="auto">{item.name}</strong>
+                    <small dir="auto">{item.text}</small>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section className="dossier-section">
+            <h3><span>04</span>{copy.steps[3]}</h3>
+            <div className="dossier-prose">
+              {copy.missions.map((item, index) => (
+                filled(values[MISSIONS[index]]) ? (
+                  <article key={item.index}>
+                    <p className="dossier-index">{item.index}</p>
+                    <h4 dir="auto">{item.title}</h4>
+                    <p className="dossier-ask" dir="auto">{item.question}</p>
+                    <p className="dossier-answer" dir="auto">{values[MISSIONS[index]]}</p>
+                  </article>
+                ) : null
+              ))}
+            </div>
+          </section>
+
+          {filled(values.practical) ? (
+            <section className="dossier-section">
+              <h3>{copy.practical}</h3>
+              <p className="dossier-answer" dir="auto">{values.practical}</p>
+            </section>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 const Field = ({ id, label, error, children }) => (
@@ -426,44 +544,10 @@ export const Join = () => {
       ) : null}
 
       {step === 4 ? (
-        <div>
-          <p className="bh-hint">{copy.review}</p>
-          <dl className="bh-review">
-            {portrait ? (
-              <div>
-                <dt>{copy.fields.photo}</dt>
-                <dd><img className="photo-review" src={portrait.url} alt="" /></dd>
-              </div>
-            ) : null}
-            <div>
-              <dt>{copy.fields.firstName}</dt>
-              <dd>{values.firstName} {values.lastName} · {copy.genders[values.gender] || ''} · {values.age} · {values.city}</dd>
-            </div>
-            <div>
-              <dt>{copy.fields.email}</dt>
-              <dd dir="ltr">{values.email} · {values.phone}</dd>
-            </div>
-            <div>
-              <dt>{copy.fields.organization}</dt>
-              <dd>{values.organization} — {values.domain}</dd>
-            </div>
-            <div>
-              <dt>{copy.fields.motivation}</dt>
-              <dd>{values.motivation}</dd>
-            </div>
-            <div>
-              <dt>{copy.steps[2]}</dt>
-              <dd>{values.squads.map((id) => copy.squadItems[id].name).join(' · ')}</dd>
-            </div>
-            {copy.missions.map((item, index) => (
-              <div key={item.index}>
-                <dt>{item.title}</dt>
-                <dd>{values[MISSIONS[index]]}</dd>
-              </div>
-            ))}
-          </dl>
+        <>
+          <Dossier copy={copy} values={values} portrait={portrait} />
           {serverError ? <p className="bh-error" role="alert">{serverError}</p> : null}
-        </div>
+        </>
       ) : null}
 
       <div className="hero-actions">
