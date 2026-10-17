@@ -238,11 +238,9 @@ export const Footer = () => {
         </div>
         <div className="foot-bottom">
           <span>{pack.footer.rights}</span>
-          {MEMBERSHIP_LAUNCH ? null : (
-            <a className="foot-admin" href="/admin">
-              {pack.footer.admin}
-            </a>
-          )}
+          <a className="foot-admin" href="/admin">
+            {pack.footer.admin}
+          </a>
         </div>
       </div>
     </footer>
