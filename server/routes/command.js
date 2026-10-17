@@ -14,6 +14,7 @@ import { hashPassword, passwordProblem, verifyPassword } from '../services/passw
 export const commandRouter = Router()
 
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const money = (value) => {
   const n = Number(value)
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN
@@ -326,8 +327,8 @@ commandRouter.post('/staff', async (req, res, next) => {
     const name = text(req.body?.name, 80)
     const email = text(req.body?.email, 254).toLowerCase()
     const role = STAFF_ROLES.includes(req.body?.role) ? req.body.role : 'staff'
-    const problem = passwordProblem(req.body?.password)
-    if (name.length < 2 || !email.includes('@') || problem) return res.status(422).json({ error: problem || 'Invalid account' })
+    const problem = name.length < 2 ? 'name' : !EMAIL.test(email) ? 'email' : passwordProblem(req.body?.password)
+    if (problem) return res.status(422).json({ error: problem })
     const permissions = (Array.isArray(req.body?.permissions) ? req.body.permissions : ['recruitment.review']).filter((item) =>
       STAFF_PERMISSIONS.includes(item),
     )

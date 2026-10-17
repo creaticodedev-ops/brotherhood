@@ -32,7 +32,7 @@ export const PasswordRules = ({ id, password, confirm }) => {
     <ul className="adm-rules" id={id}>
       <Rule ok={password.length >= MIN_PASSWORD}>{a('reset.rules.length')}</Rule>
       <Rule ok={classesOf(password) >= 3}>{a('reset.rules.mix')}</Rule>
-      <Rule ok={Boolean(confirm) && confirm === password}>{a('reset.rules.match')}</Rule>
+      {confirm === undefined ? null : <Rule ok={Boolean(confirm) && confirm === password}>{a('reset.rules.match')}</Rule>}
     </ul>
   )
 }
