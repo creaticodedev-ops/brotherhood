@@ -12,6 +12,7 @@ import { commandRouter, loginStaff } from './command.js'
 import {
   adminConfigured,
   can,
+  canSeeMembers,
   changePassword,
   checkPassword,
   clearFailures,
@@ -25,7 +26,7 @@ import {
   openSession,
   openStaffSession,
   recordFailure,
-  requireAdmin,
+  requireActor,
   resetPassword,
   resetTokenState,
 } from '../services/adminAuth.js'
@@ -65,6 +66,7 @@ const throttled = (key, max, windowMs) => {
   const now = Date.now()
   const recent = (hits.get(key) || []).filter((at) => now - at < windowMs)
   recent.push(now)
+  if (!hits.has(key) && hits.size >= 4000) hits.delete(hits.keys().next().value)
   hits.set(key, recent)
   return recent.length > max
 }
@@ -181,13 +183,14 @@ adminRouter.post('/password/reset', async (req, res, next) => {
   }
 })
 
-adminRouter.use(requireAdmin)
+adminRouter.use(requireActor)
 adminRouter.use('/ops', commandRouter)
 
 /* ── Settings: change password (signed in, current password required) ── */
 
 adminRouter.post('/password/change', async (req, res, next) => {
   try {
+    if (req.actor?.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     const key = req.ip || 'unknown'
     if (loginBlocked(key)) return res.status(429).json({ error: 'Too many attempts' })
     const { current, password, confirm } = req.body || {}
@@ -222,9 +225,16 @@ adminRouter.get('/stream', (req, res) => {
   send('ready', { at: Date.now() })
   const unsubscribe = subscribe(send)
   const heartbeat = setInterval(() => {
-    if (isAuthenticated(req)) return res.write(': ping\n\n')
-    send('expired', {})
-    res.end()
+    currentActor(req)
+      .then((actor) => {
+        if (res.writableEnded) return
+        if (actor) return res.write(': ping\n\n')
+        send('expired', {})
+        res.end()
+      })
+      .catch(() => {
+        if (!res.writableEnded) res.end()
+      })
   }, HEARTBEAT_MS)
   req.on('close', () => {
     clearInterval(heartbeat)
@@ -430,7 +440,7 @@ adminRouter.get('/stats', async (req, res, next) => {
       daily: daily.map(({ _id, count, amount }) => ({ day: _id, count, amount })),
       days: DAILY_DAYS,
       timeZone: tz,
-      latest: latest.map(toApplication),
+      latest: canSeeMembers(req.actor) ? latest.map(toApplication) : [],
       archive: { published: publishedStories, missions: publishedMissions },
       generatedAt: Date.now(),
     })
@@ -441,7 +451,9 @@ adminRouter.get('/stats', async (req, res, next) => {
 
 /* ── Notifications ── */
 
-adminRouter.get('/notifications', async (req, res, next) => {
+const membersOnly = (req, res, next) => (canSeeMembers(req.actor) ? next() : res.status(403).json({ error: 'Forbidden' }))
+
+adminRouter.get('/notifications', membersOnly, async (req, res, next) => {
   try {
     const filter = param(req.query.filter) === 'unread' ? { readAt: null } : {}
     const limit = intIn(req.query.limit, 1, PAGE_MAX, 40)
@@ -456,7 +468,7 @@ adminRouter.get('/notifications', async (req, res, next) => {
   }
 })
 
-adminRouter.post('/notifications/read', async (req, res, next) => {
+adminRouter.post('/notifications/read', membersOnly, async (req, res, next) => {
   try {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id) => mongoose.isValidObjectId(id)).slice(0, PAGE_MAX) : []
     if (!req.body?.all && !ids.length) return res.status(422).json({ error: 'Nothing to update' })
@@ -470,7 +482,7 @@ adminRouter.post('/notifications/read', async (req, res, next) => {
   }
 })
 
-adminRouter.patch('/notifications/:id', async (req, res, next) => {
+adminRouter.patch('/notifications/:id', membersOnly, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Notification not found' })
     const read = req.body?.read !== false

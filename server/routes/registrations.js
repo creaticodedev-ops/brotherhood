@@ -32,6 +32,7 @@ const rateLimited = (ip) => {
   const now = Date.now()
   const recent = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS)
   recent.push(now)
+  if (!hits.has(ip) && hits.size >= 4000) hits.delete(hits.keys().next().value)
   hits.set(ip, recent)
   return recent.length > MAX_PER_WINDOW
 }

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import mongoose from 'mongoose'
 import { AuditEvent, recordAudit, toAudit } from '../models/AuditEvent.js'
@@ -363,8 +364,13 @@ commandRouter.patch('/staff/:id', async (req, res, next) => {
   }
 })
 
+let unknownHash = null
+
 export const loginStaff = async (email, password) => {
-  const doc = await StaffAccount.findOne({ email: String(email || '').trim().toLowerCase() })
-  if (!doc?.active || !(await verifyPassword(password, doc.passwordHash))) return null
+  const normalized = String(email || '').trim().toLowerCase().slice(0, 254)
+  const doc = normalized.includes('@') ? await StaffAccount.findOne({ email: normalized }).lean() : null
+  unknownHash ||= await hashPassword(randomBytes(32).toString('hex'))
+  const matches = await verifyPassword(typeof password === 'string' ? password : '', doc?.passwordHash || unknownHash)
+  if (!doc?.active || !matches) return null
   return doc
 }

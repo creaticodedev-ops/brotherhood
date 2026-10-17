@@ -121,11 +121,15 @@ export const currentActor = async (req) => {
 
 export const can = (actor, permission) => Boolean(actor && (actor.permissions.includes('*') || actor.permissions.includes(permission)))
 
+/** Applications, portraits, and notifications include member names and contact details. */
+export const canSeeMembers = (actor) => can(actor, 'recruitment.review') || can(actor, 'recruitment.decide') || can(actor, 'members.read')
+
 export const closeSession = (res) => res.clearCookie(COOKIE, { path: COOKIE_PATH })
 
 const recentFailures = (key) => {
   const now = Date.now()
   const list = (failures.get(key) || []).filter((at) => now - at < FAILURE_WINDOW_MS)
+  if (!failures.has(key) && failures.size >= 4000) failures.delete(failures.keys().next().value)
   failures.set(key, list)
   return list
 }
@@ -138,6 +142,22 @@ export const requireAdmin = (req, res, next) => {
   if (!adminConfigured()) return res.status(503).json({ error: 'Admin not configured' })
   if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' })
   next()
+}
+
+/**
+ * Requires a session and reloads the account. A staff cookie for a deactivated
+ * account, or one issued before the session was rotated, is rejected here.
+ */
+export const requireActor = async (req, res, next) => {
+  if (!adminConfigured()) return res.status(503).json({ error: 'Admin not configured' })
+  try {
+    const actor = await currentActor(req)
+    if (!actor) return res.status(401).json({ error: 'Unauthorized' })
+    req.actor = actor
+    next()
+  } catch (error) {
+    next(error)
+  }
 }
 
 /* ── Password reset ── */

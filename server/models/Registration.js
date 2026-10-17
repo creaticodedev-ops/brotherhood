@@ -70,13 +70,21 @@ registrationSchema.index({ createdAt: -1 })
 
 export const Registration = mongoose.models.Registration || mongoose.model('Registration', registrationSchema)
 
-/** Maps statuses from the first version of the form (new / contacted / closed) onto the admin workflow. */
+/**
+ * Statuses from the first form version. `new` is a current application status and is not included.
+ * Each server start applies this map, so a current status in here would be rewritten on every deploy.
+ */
+export const LEGACY_STATUS_UPDATES = [
+  { match: ['contacted'], status: 'pending' },
+  { match: ['closed'], status: 'completed' },
+]
+
+/** Maps statuses from the first version of the form (contacted / closed) onto the admin workflow. */
 export const migrateLegacyStatuses = async () => {
-  const [pending, completed] = await Promise.all([
-    Registration.updateMany({ status: { $in: ['new', 'contacted'] } }, { $set: { status: 'pending' } }),
-    Registration.updateMany({ status: 'closed' }, { $set: { status: 'completed' } }),
-  ])
-  const moved = pending.modifiedCount + completed.modifiedCount
+  const results = await Promise.all(
+    LEGACY_STATUS_UPDATES.map((update) => Registration.updateMany({ status: { $in: update.match } }, { $set: { status: update.status } })),
+  )
+  const moved = results.reduce((sum, result) => sum + result.modifiedCount, 0)
   if (moved) console.log(`[db] Migrated ${moved} registration(s) to the admin status workflow`)
 }
 

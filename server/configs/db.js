@@ -17,11 +17,11 @@ export const connectDB = async () => {
 
   try {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 })
-    const { host, port, name } = mongoose.connection
-    console.log(`[db] Connected to mongodb://${host}:${port}/${name}`)
+    console.log(`[db] Connected (${mongoose.connection.name})`)
     return true
   } catch (error) {
-    console.error(`[db] Connection failed: ${error.message}`)
+    const detail = String(error?.message || 'unknown error').replace(/mongodb(?:\+srv)?:\/\/\S+/gi, 'mongodb://[redacted]')
+    console.error(`[db] Connection failed: ${detail}`)
     return false
   }
 }

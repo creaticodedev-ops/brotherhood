@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import '../landing/landing.css'
 import '../landing/hero.css'
 import './site.css'
 import { Home } from './Home'
-import { Join } from './Join'
 import { Recruit } from './Recruit'
 import { About, Archive, Creative, NotFound, Privacy, SocialPage, StoryPage } from './Pages'
 import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { Footer, Nav, useCopy } from './ui'
 import '../styles/touch-forms.css'
+
+const Join = lazy(() => import('./Join').then((module) => ({ default: module.Join })))
 
 const OPEN_DURING_LAUNCH = new Set(['recruit', 'join', 'privacy'])
 
@@ -60,7 +61,13 @@ export const SiteApp = () => {
   if (route.name === 'story') page = <StoryPage key={route.slug} slug={route.slug} />
   if (route.name === 'creative') page = <Creative />
   if (route.name === 'social') page = <SocialPage />
-  if (route.name === 'join') page = <Join />
+  if (route.name === 'join') {
+    page = (
+      <Suspense fallback={null}>
+        <Join />
+      </Suspense>
+    )
+  }
   if (route.name === 'privacy') page = <Privacy />
   if (route.name === 'recruit' || launchGate) {
     return (

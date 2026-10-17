@@ -15,6 +15,19 @@ const HOST = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1')
 
 const app = express()
 app.disable('x-powered-by')
+// Render (and the Vercel rewrite in front of it) is one reverse proxy. Trusting that
+// single hop makes req.ip the visitor, so login and registration limits are per person.
+if (process.env.RENDER) app.set('trust proxy', 1)
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'DENY',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  })
+  next()
+})
 app.use(express.json({ limit: '2mb' }))
 
 app.get('/api/health', (_req, res) => {
@@ -32,7 +45,7 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }))
 
 app.use((err, _req, res, _next) => {
   const status = err.status || (err.type === 'entity.parse.failed' ? 400 : 500)
-  if (status >= 500) console.error('[api]', err.message)
+  if (status >= 500) console.error('[api]', String(err.message || 'error').replace(/mongodb(?:\+srv)?:\/\/\S+/gi, 'mongodb://[redacted]'))
   const message = typeof err.expose === 'string' ? err.expose : status < 500 ? 'Bad request' : 'Internal server error'
   res.status(status).json({ error: message })
 })
