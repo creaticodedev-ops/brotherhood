@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://brotherhood-nafz.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
