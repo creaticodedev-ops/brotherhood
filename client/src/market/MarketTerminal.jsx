@@ -9,6 +9,7 @@ import { retryQuote, useQuote } from './quoteStore'
 import { computeStats, rangePosition } from './stats'
 import { TerminalChart } from './TerminalChart'
 import './market.css'
+import '../styles/touch-forms.css'
 
 const PERIODS = ['w1', 'm1', 'm3', 'ytd', 'y1']
 const RETRY_MS = 5000

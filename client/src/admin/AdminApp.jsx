@@ -1,4 +1,5 @@
 import './admin.css'
+import '../styles/touch-forms.css'
 import { Component, useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi, UNAUTHORIZED_EVENT } from './api'

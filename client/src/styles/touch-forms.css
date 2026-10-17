@@ -1,0 +1,32 @@
+/* iOS and Android zoom the page when a focused field is under 16px, then leave that zoom in place.
+   Desktop type sizes stay unchanged. Pinch zoom stays available. */
+
+@media (max-width: 1024px), ((hover: none) and (pointer: coarse)) {
+  :is(input, textarea, select):not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='hidden'],
+    [type='button'],
+    [type='submit'],
+    [type='reset'],
+    [type='image']
+  ) {
+    max-width: 100%;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.4;
+    scroll-margin-top: calc(var(--nav-h, 72px) + env(safe-area-inset-top, 0px) + 12px);
+    scroll-margin-bottom: 24px;
+  }
+
+  .nav {
+    height: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .foot {
+    padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+}

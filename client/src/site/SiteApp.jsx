@@ -8,6 +8,7 @@ import { Recruit } from './Recruit'
 import { About, Archive, Creative, NotFound, Privacy, SocialPage, StoryPage } from './Pages'
 import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { Footer, Nav, useCopy } from './ui'
+import '../styles/touch-forms.css'
 
 const OPEN_DURING_LAUNCH = new Set(['recruit', 'join', 'privacy'])
 
