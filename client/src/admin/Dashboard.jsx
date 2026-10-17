@@ -297,7 +297,7 @@ export const Dashboard = ({ onLogout }) => {
           ) : route.view === 'content' && show.content ? (
             <ContentDesk />
           ) : route.view === 'applications' && show.applications ? (
-            <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} />
+            <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} canDelete={actor?.role === 'admin'} />
           ) : route.view === 'missions' ? (
             <MissionsDesk />
           ) : route.view === 'caisse' && show.caisse ? (

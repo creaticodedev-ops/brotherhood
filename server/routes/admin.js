@@ -7,7 +7,7 @@ import { Story } from '../models/Story.js'
 import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import { recordAudit } from '../models/AuditEvent.js'
-import { readStoredPortrait, rememberLocalPortrait } from '../services/portrait.js'
+import { readStoredPortrait, rememberLocalPortrait, removePortrait } from '../services/portrait.js'
 import { commandRouter, loginStaff } from './command.js'
 import {
   adminConfigured,
@@ -410,6 +410,27 @@ adminRouter.patch('/registrations/:id', recruitment, async (req, res, next) => {
     const item = toApplication(doc)
     publish('application', item)
     res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/** Removes one application with its portrait and notifications. Irreversible, so it is limited to the administrator. */
+adminRouter.delete('/registrations/:id', recruitment, async (req, res, next) => {
+  try {
+    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findOneAndDelete({ _id: req.params.id }).lean()
+    if (!doc) return notFound(res)
+    await Promise.all([
+      removePortrait(doc._id).catch((error) => console.error('[portrait] Not removed:', error.message)),
+      Notification.deleteMany({ registration: doc._id }).catch((error) => console.error('[admin] Notifications not removed:', error.message)),
+    ])
+    await recordAudit(req.actor, 'application.deleted', 'application', doc._id, `${doc.firstName} ${doc.lastName}`)
+    const id = String(doc._id)
+    publish('application', { id, deleted: true })
+    publish('notifications', { unread: await unreadCount(), removed: id })
+    res.json({ id, status: doc.status })
   } catch (error) {
     next(error)
   }

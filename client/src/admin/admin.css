@@ -1754,7 +1754,7 @@ html[lang='ar'] .adm-panel-head h2 {
 .adm-col-squad { width: 15%; }
 .adm-col-date { width: 112px; }
 .adm-col-status { width: 132px; }
-.adm-col-actions { width: 148px; }
+.adm-col-actions { width: 192px; }
 
 .adm-progress {
   position: absolute;
@@ -1975,9 +1975,101 @@ html[lang='ar'] .adm-panel-head h2 {
   color: #e3a59e;
 }
 
+.adm-quick-btn.is-delete:hover:not(:disabled),
+.adm-quick-btn.is-delete:focus-visible {
+  border-color: rgba(255, 41, 72, 0.6);
+  background: rgba(200, 16, 46, 0.12);
+  color: var(--green-bright);
+}
+
 .adm-quick-btn:disabled {
   cursor: progress;
   opacity: 0.5;
+}
+
+.adm-flash {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(34, 181, 115, 0.32);
+  border-radius: 10px;
+  background: rgba(0, 154, 90, 0.07);
+  color: var(--text-strong);
+  font-size: 0.8125rem;
+  animation: adm-rise 0.35s var(--ease) both;
+}
+
+.adm-flash.is-error {
+  border-color: rgba(212, 119, 110, 0.5);
+  background: rgba(180, 83, 75, 0.1);
+}
+
+.adm-confirm {
+  width: min(calc(100% - 32px), 420px);
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: var(--adm-card);
+  color: var(--text);
+  box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.9);
+}
+
+.adm-confirm::backdrop {
+  background: rgba(5, 6, 5, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.adm-confirm[open] {
+  animation: adm-rise 0.35s var(--ease) both;
+}
+
+.adm-confirm-card {
+  display: grid;
+  gap: 10px;
+  padding: 24px;
+}
+
+.adm-confirm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(255, 41, 72, 0.45);
+  border-radius: 12px;
+  background: rgba(200, 16, 46, 0.12);
+  color: var(--green-bright);
+}
+
+.adm-confirm h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.adm-confirm p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.adm-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+html[lang='ar'] .adm-confirm h2 {
+  font-family: var(--font-arabic);
+  letter-spacing: 0;
 }
 
 .adm-open {

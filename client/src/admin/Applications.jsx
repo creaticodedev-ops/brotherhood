@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
 import { formatClock, formatCount, formatDate, formatMoney, fullName } from './format'
-import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon } from './icons'
+import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon, TrashIcon } from './icons'
 import { STATUS_ORDER } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
@@ -31,6 +31,52 @@ const COLUMNS = [
   { key: 'status', sort: 'status', col: 'status' },
 ]
 
+const FLASH_MS = 4500
+
+const ConfirmDelete = ({ item, pending, onCancel, onConfirm }) => {
+  const a = useAdminText()
+  const ref = useRef(null)
+  const name = fullName(item)
+
+  useEffect(() => {
+    const dialog = ref.current
+    if (dialog && !dialog.open) dialog.showModal()
+    return () => dialog?.open && dialog.close()
+  }, [])
+
+  return (
+    <dialog
+      ref={ref}
+      className="adm-confirm"
+      aria-labelledby="adm-confirm-title"
+      aria-describedby="adm-confirm-body"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onCancel()
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !pending) onCancel()
+      }}
+    >
+      <div className="adm-confirm-card">
+        <span className="adm-confirm-icon" aria-hidden="true">
+          <TrashIcon size={18} />
+        </span>
+        <h2 id="adm-confirm-title">{a('table.deleteTitle')}</h2>
+        <p id="adm-confirm-body">{a('table.deleteBody', { name })}</p>
+        <div className="adm-confirm-actions">
+          <button type="button" className="btn btn-sm" onClick={onCancel} disabled={pending} autoFocus>
+            {a('table.deleteCancel')}
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={onConfirm} disabled={pending}>
+            {a('table.deleteConfirm')}
+          </button>
+        </div>
+      </div>
+    </dialog>
+  )
+}
+
 const useDebounced = (value, ms) => {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
@@ -40,7 +86,7 @@ const useDebounced = (value, ms) => {
   return debounced
 }
 
-export const Applications = ({ version, fresh, onOpen, onChanged }) => {
+export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = false }) => {
   const a = useAdminText()
   const { t, locale } = useI18n()
   const [query, setQuery] = useState('')
@@ -59,8 +105,17 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState({})
   const [attempt, setAttempt] = useState(0)
+  const [doomed, setDoomed] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [flash, setFlash] = useState(null)
   const q = useDebounced(query.trim(), SEARCH_DELAY)
   const listRef = useRef(null)
+
+  useEffect(() => {
+    if (!flash) return undefined
+    const id = setTimeout(() => setFlash(null), FLASH_MS)
+    return () => clearTimeout(id)
+  }, [flash])
 
   useEffect(() => {
     setPage(1)
@@ -116,6 +171,33 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
     },
     [onChanged, onOpen],
   )
+
+  const confirmDelete = async () => {
+    const item = doomed
+    if (!item) return
+    setDeleting(true)
+    try {
+      await adminApi.deleteApplication(item.id)
+      setData((prev) => {
+        if (!prev) return prev
+        const counts = { ...prev.counts }
+        if (item.status in counts) counts[item.status] = Math.max(0, counts[item.status] - 1)
+        return { ...prev, items: prev.items.filter((row) => row.id !== item.id), total: Math.max(0, prev.total - 1), counts }
+      })
+      setFlash({ tone: 'ok', text: a('table.deleted', { name: fullName(item) }) })
+      onChanged()
+    } catch (err) {
+      if (err.status === 404) {
+        setFlash({ tone: 'ok', text: a('table.deleted', { name: fullName(item) }) })
+        onChanged()
+      } else {
+        setFlash({ tone: 'error', text: a('table.deleteFailed') })
+      }
+    } finally {
+      setDeleting(false)
+      setDoomed(null)
+    }
+  }
 
   const goTo = (next) => {
     setPage(next)
@@ -241,6 +323,12 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
         ) : null}
       </div>
 
+      {flash ? (
+        <p className={`adm-flash is-${flash.tone}`} role={flash.tone === 'error' ? 'alert' : 'status'}>
+          {flash.text}
+        </p>
+      ) : null}
+
       <section ref={listRef} className={`adm-panel adm-table-panel${loading && data ? ' is-loading' : ''}`} aria-busy={loading}>
         <span className="adm-progress" aria-hidden="true" />
         {error && !data ? (
@@ -335,28 +423,44 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
                     <StatusPill status={item.status} />
                   </td>
                   <td className="is-actions" onClick={(event) => event.stopPropagation()}>
-                    {item.status === 'pending' || item.status === 'new' ? (
+                    {item.status === 'pending' || item.status === 'new' || canDelete ? (
                       <span className="adm-quick">
-                        <button
-                          type="button"
-                          className="adm-quick-btn is-approve"
-                          disabled={Boolean(busy[item.id])}
-                          onClick={() => changeStatus(item, item.kind === 'membership' ? 'accepted' : 'approved')}
-                          aria-label={`${a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')} — ${fullName(item)}`}
-                          title={a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')}
-                        >
-                          <CheckIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-quick-btn is-reject"
-                          disabled={Boolean(busy[item.id])}
-                          onClick={() => changeStatus(item, 'rejected')}
-                          aria-label={`${a('actions.rejected')} — ${fullName(item)}`}
-                          title={a('actions.rejected')}
-                        >
-                          <CloseIcon size={16} />
-                        </button>
+                        {item.status === 'pending' || item.status === 'new' ? (
+                          <>
+                            <button
+                              type="button"
+                              className="adm-quick-btn is-approve"
+                              disabled={Boolean(busy[item.id])}
+                              onClick={() => changeStatus(item, item.kind === 'membership' ? 'accepted' : 'approved')}
+                              aria-label={`${a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')} — ${fullName(item)}`}
+                              title={a(item.kind === 'membership' ? 'actions.accepted' : 'actions.approved')}
+                            >
+                              <CheckIcon />
+                            </button>
+                            <button
+                              type="button"
+                              className="adm-quick-btn is-reject"
+                              disabled={Boolean(busy[item.id])}
+                              onClick={() => changeStatus(item, 'rejected')}
+                              aria-label={`${a('actions.rejected')} — ${fullName(item)}`}
+                              title={a('actions.rejected')}
+                            >
+                              <CloseIcon size={16} />
+                            </button>
+                          </>
+                        ) : null}
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            className="adm-quick-btn is-delete"
+                            disabled={Boolean(busy[item.id]) || doomed?.id === item.id}
+                            onClick={() => setDoomed(item)}
+                            aria-label={`${a('table.delete')} — ${fullName(item)}`}
+                            title={a('table.delete')}
+                          >
+                            <TrashIcon />
+                          </button>
+                        ) : null}
                       </span>
                     ) : null}
                     <button type="button" className="adm-open" onClick={() => onOpen(item.id)} aria-label={`${a('table.open')} — ${fullName(item)}`}>
@@ -396,6 +500,8 @@ export const Applications = ({ version, fresh, onOpen, onChanged }) => {
           </footer>
         ) : null}
       </section>
+
+      {doomed ? <ConfirmDelete item={doomed} pending={deleting} onCancel={() => setDoomed(null)} onConfirm={confirmDelete} /> : null}
     </div>
   )
 }

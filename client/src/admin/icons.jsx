@@ -117,6 +117,14 @@ export const WhatsAppIcon = ({ size = 16 }) => (
   </Icon>
 )
 
+export const TrashIcon = ({ size = 16 }) => (
+  <Icon size={size}>
+    <path d="M3 5h12M7.25 5V3.5h3.5V5" />
+    <path d="M4.5 5l.7 9.6a1.5 1.5 0 0 0 1.5 1.4h4.6a1.5 1.5 0 0 0 1.5-1.4L13.5 5" />
+    <path d="M7.5 8v5M10.5 8v5" />
+  </Icon>
+)
+
 export const MenuIcon = () => (
   <Icon>
     <path d="M3 6h12M3 12h12" />

@@ -43,6 +43,7 @@ export const adminApi = {
   application: (id, signal) => request(`/registrations/${encodeURIComponent(id)}`, { signal }),
   setStatus: (id, status) => request(`/registrations/${encodeURIComponent(id)}`, { method: 'PATCH', body: { status } }),
   setNotes: (id, notes) => request(`/registrations/${encodeURIComponent(id)}`, { method: 'PATCH', body: { notes } }),
+  deleteApplication: (id) => request(`/registrations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   stories: (signal) => request('/stories', { signal }),
   saveStory: (story) => request(story.id ? `/stories/${encodeURIComponent(story.id)}` : '/stories', { method: story.id ? 'PATCH' : 'POST', body: story }),
   deleteStory: (id) => request(`/stories/${encodeURIComponent(id)}`, { method: 'DELETE' }),

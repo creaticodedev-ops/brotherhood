@@ -28,15 +28,17 @@ export const useNotifications = () => {
     }))
   }, [])
 
-  const sync = useCallback(({ unread, item, read }) => {
+  const sync = useCallback(({ unread, item, read, removed }) => {
     setState((prev) => ({
       ...prev,
       unread,
-      items: prev.items.map((entry) => {
-        if (item && entry.id === item.id) return item
-        if (read === 'all' || (Array.isArray(read) && read.includes(entry.id))) return { ...entry, read: true }
-        return entry
-      }),
+      items: prev.items
+        .filter((entry) => !removed || entry.registration !== removed)
+        .map((entry) => {
+          if (item && entry.id === item.id) return item
+          if (read === 'all' || (Array.isArray(read) && read.includes(entry.id))) return { ...entry, read: true }
+          return entry
+        }),
     }))
   }, [])
 
