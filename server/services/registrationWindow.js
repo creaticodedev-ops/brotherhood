@@ -1,4 +1,5 @@
 import { RegistrationWindow } from '../models/RegistrationWindow.js'
+import { can } from './adminAuth.js'
 import { readSettingsInput, resolveRegistration, toPublicWindow } from '../../shared/registrationWindow.js'
 
 export { readSettingsInput, resolveRegistration, toPublicWindow }
@@ -22,4 +23,4 @@ export const saveRegistrationWindow = (data) =>
     { new: true, upsert: true, setDefaultsOnInsert: true },
   ).lean()
 
-export const windowAdminOnly = (req, res, next) => (req.actor?.role === 'admin' ? next() : res.status(403).json({ error: 'Forbidden' }))
+export const windowAdminOnly = (req, res, next) => (can(req.actor, 'registration.manage') ? next() : res.status(403).json({ error: 'Forbidden' }))

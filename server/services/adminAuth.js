@@ -105,7 +105,8 @@ export const openSession = (req, res) => writeSession(req, res, `v2.${Date.now()
 
 export const openStaffSession = (req, res, staff) => writeSession(req, res, `v3.${Date.now() + SESSION_MS}.${staff._id}.${staff.sessionVersion}`)
 
-const PRIMARY = { role: 'admin', id: 'primary', name: 'Admin', permissions: ['*'] }
+/** The password-only account is the Super Admin: the only actor that manages accounts and permissions. */
+const PRIMARY = { role: 'superadmin', id: 'primary', name: 'Super Admin', permissions: ['*'], superAdmin: true }
 
 /** The signed-in person. Primary admin cookies stay valid. Staff cookies are checked against the account. */
 export const currentActor = async (req) => {
@@ -116,10 +117,17 @@ export const currentActor = async (req) => {
   const doc = await StaffAccount.findById(parsed.parts[2]).lean()
   if (!doc?.active || Number(parsed.parts[3]) !== doc.sessionVersion) return null
   const staff = toStaff(doc)
-  return { role: staff.role, id: staff.id, name: staff.name, permissions: staff.permissions }
+  return { role: staff.role, id: staff.id, name: staff.name, permissions: staff.permissions, superAdmin: false }
 }
 
-export const can = (actor, permission) => Boolean(actor && (actor.permissions.includes('*') || actor.permissions.includes(permission)))
+export const can = (actor, permission) =>
+  Boolean(Array.isArray(actor?.permissions) && (actor.permissions.includes('*') || actor.permissions.includes(permission)))
+
+export const isSuperAdmin = (actor) => Boolean(actor?.superAdmin === true && actor.id === 'primary')
+
+export const superAdminOnly = (req, res, next) => (isSuperAdmin(req.actor) ? next() : res.status(403).json({ error: 'Forbidden' }))
+
+export const requirePermission = (permission) => (req, res, next) => (can(req.actor, permission) ? next() : res.status(403).json({ error: 'Forbidden' }))
 
 /** Applications, portraits, and notifications include member names and contact details. */
 export const canSeeMembers = (actor) => can(actor, 'recruitment.review') || can(actor, 'recruitment.decide') || can(actor, 'members.read')

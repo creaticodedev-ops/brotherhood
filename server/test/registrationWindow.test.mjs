@@ -139,15 +139,21 @@ test('the public payload omits the override flag', () => {
   assert.equal('override' in payload, false)
 })
 
-test('only an administrator may change the window', () => {
+test('only an account holding registration.manage may change the window', () => {
   const seen = []
   const res = { status: (code) => ({ json: (body) => seen.push({ code, body }) }) }
-  windowAdminOnly({ actor: { role: 'staff' } }, res, () => seen.push('next'))
+  windowAdminOnly({ actor: { role: 'staff', permissions: ['recruitment.review'] } }, res, () => seen.push('next'))
   windowAdminOnly({ actor: null }, res, () => seen.push('next'))
+  windowAdminOnly({ actor: { role: 'admin', permissions: ['audit.read'] } }, res, () => seen.push('next'))
   windowAdminOnly({ actor: { role: 'admin' } }, res, () => seen.push('next'))
+  windowAdminOnly({ actor: { role: 'admin', permissions: ['registration.manage'] } }, res, () => seen.push('next'))
+  windowAdminOnly({ actor: { role: 'superadmin', permissions: ['*'], superAdmin: true, id: 'primary' } }, res, () => seen.push('next'))
   assert.deepEqual(seen, [
     { code: 403, body: { error: 'Forbidden' } },
     { code: 403, body: { error: 'Forbidden' } },
+    { code: 403, body: { error: 'Forbidden' } },
+    { code: 403, body: { error: 'Forbidden' } },
+    'next',
     'next',
   ])
 })

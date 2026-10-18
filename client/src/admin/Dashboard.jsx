@@ -59,6 +59,20 @@ const useStats = (version) => {
   return { ...state, retry: useCallback(() => setAttempt((n) => n + 1), []) }
 }
 
+const AccessDenied = ({ onHome }) => {
+  const a = useAdminText()
+  return (
+    <section className="adm-view adm-denied" role="alert">
+      <p className="kicker">{a('access.kicker')}</p>
+      <h1 className="adm-title">{a('access.title')}</h1>
+      <p className="adm-lead">{a('access.body')}</p>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={onHome}>
+        {a('access.home')}
+      </button>
+    </section>
+  )
+}
+
 export const Dashboard = ({ onLogout }) => {
   const a = useAdminText()
   const { locale } = useI18n()
@@ -152,16 +166,19 @@ export const Dashboard = ({ onLogout }) => {
   )
 
   const pendingCount = (stats.data?.statuses?.pending.count || 0) + (stats.data?.statuses?.new.count || 0)
-  const permit = (permission) => !actor || actor.role === 'admin' || actor.permissions?.includes('*') || actor.permissions?.includes(permission)
+  const permit = (permission) => Boolean(actor?.permissions?.includes('*') || actor?.permissions?.includes(permission))
+  const superAdmin = actor?.superAdmin === true
   const show = {
+    overview: true,
     applications: permit('recruitment.review') || permit('recruitment.decide'),
-    missions: true,
+    missions: Boolean(actor),
     caisse: permit('finance.record') || permit('finance.approve'),
-    team: !actor || actor.role === 'admin',
-    audit: !actor || actor.role === 'admin',
-    content: !actor || actor.role === 'admin',
-    settings: !actor || actor.role === 'admin',
-    registration: !actor || actor.role === 'admin',
+    team: superAdmin,
+    audit: permit('audit.read'),
+    content: permit('content.manage'),
+    settings: superAdmin,
+    registration: permit('registration.manage'),
+    notifications: permit('recruitment.review') || permit('recruitment.decide') || permit('members.read'),
   }
 
   const navLink = (view, Icon, extra = null) => (
@@ -208,20 +225,22 @@ export const Dashboard = ({ onLogout }) => {
           {show.team ? navLink('team', ApplicationsIcon) : null}
           {show.audit ? navLink('audit', BellIcon) : null}
           {show.content ? navLink('content', ContentIcon) : null}
-          <button
-            type="button"
-            className="adm-nav-link"
-            onClick={() => {
-              setMenuOpen(false)
-              setPanelOpen(true)
-            }}
-          >
-            <BellIcon />
-            <span>{a('nav.notifications')}</span>
-            {unread ? <span className="adm-count is-alert">{formatCount(unread, locale)}</span> : null}
-          </button>
+          {show.notifications ? (
+            <button
+              type="button"
+              className="adm-nav-link"
+              onClick={() => {
+                setMenuOpen(false)
+                setPanelOpen(true)
+              }}
+            >
+              <BellIcon />
+              <span>{a('nav.notifications')}</span>
+              {unread ? <span className="adm-count is-alert">{formatCount(unread, locale)}</span> : null}
+            </button>
+          ) : null}
           {show.registration ? navLink('registration', SettingsIcon) : null}
-          {navLink('settings', SettingsIcon)}
+          {show.settings ? navLink('settings', SettingsIcon) : null}
         </nav>
 
         <div className="adm-side-foot">
@@ -272,39 +291,45 @@ export const Dashboard = ({ onLogout }) => {
             <i aria-hidden="true" />
             <span>{a(live ? 'live.on' : 'live.off')}</span>
           </p>
-          <button
-            type="button"
-            className={`adm-icon-btn adm-bell${unread ? ' has-unread' : ''}`}
-            onClick={() => setPanelOpen(true)}
-            aria-label={a('notifications.bell', { n: unread })}
-            aria-haspopup="dialog"
-            aria-expanded={panelOpen}
-          >
-            <BellIcon />
-            {unread ? (
-              <span className="adm-badge" key={unread}>
-                {unread > 99 ? '99+' : unread}
-              </span>
-            ) : null}
-          </button>
+          {show.notifications ? (
+            <button
+              type="button"
+              className={`adm-icon-btn adm-bell${unread ? ' has-unread' : ''}`}
+              onClick={() => setPanelOpen(true)}
+              aria-label={a('notifications.bell', { n: unread })}
+              aria-haspopup="dialog"
+              aria-expanded={panelOpen}
+            >
+              <BellIcon />
+              {unread ? (
+                <span className="adm-badge" key={unread}>
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
         </header>
 
         <main className="adm-content" id="main">
-          {route.view === 'settings' && show.settings ? (
+          {route.view !== 'overview' && !actor ? (
+            <p className="adm-lead" aria-busy="true">…</p>
+          ) : route.view !== 'overview' && !show[route.view] ? (
+            <AccessDenied onHome={() => navigate({ view: 'overview' })} />
+          ) : route.view === 'settings' ? (
             <Settings />
-          ) : route.view === 'registration' && show.registration ? (
+          ) : route.view === 'registration' ? (
             <RegistrationDesk />
-          ) : route.view === 'content' && show.content ? (
+          ) : route.view === 'content' ? (
             <ContentDesk />
-          ) : route.view === 'applications' && show.applications ? (
-            <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} canDelete={actor?.role === 'admin'} />
+          ) : route.view === 'applications' ? (
+            <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} canDelete={permit('recruitment.delete')} />
           ) : route.view === 'missions' ? (
             <MissionsDesk />
-          ) : route.view === 'caisse' && show.caisse ? (
+          ) : route.view === 'caisse' ? (
             <CaisseDesk />
-          ) : route.view === 'team' && show.team ? (
+          ) : route.view === 'team' ? (
             <TeamDesk />
-          ) : route.view === 'audit' && show.audit ? (
+          ) : route.view === 'audit' ? (
             <AuditDesk />
           ) : (
             <CommandHome stats={stats.data} error={stats.error} onRetry={stats.retry} onOpen={openApplication} onNavigate={(view) => navigate({ view })} />
@@ -314,7 +339,7 @@ export const Dashboard = ({ onLogout }) => {
 
       {route.id ? <ApplicationDrawer id={route.id} version={version} onClose={() => navigate({ view: route.view })} onChanged={refresh} /> : null}
 
-      <NotificationPanel open={panelOpen} center={center} onClose={() => setPanelOpen(false)} onOpenApplication={openApplication} />
+      {show.notifications ? <NotificationPanel open={panelOpen} center={center} onClose={() => setPanelOpen(false)} onOpenApplication={openApplication} /> : null}
       <Toasts toasts={toasts} onOpen={openToast} onDismiss={dismissToast} />
     </div>
   )

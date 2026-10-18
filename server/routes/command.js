@@ -6,8 +6,8 @@ import { FinanceBook, loadBook } from '../models/FinanceBook.js'
 import { LEDGER_KINDS, LedgerEntry, toEntry } from '../models/LedgerEntry.js'
 import { MISSION_STATUSES, OpsMission, toMission } from '../models/OpsMission.js'
 import { Registration, toApplication } from '../models/Registration.js'
-import { STAFF_PERMISSIONS, STAFF_ROLES, StaffAccount, toStaff } from '../models/StaffAccount.js'
-import { can, currentActor } from '../services/adminAuth.js'
+import { ADMIN_ONLY_PERMISSIONS, ALL_PERMISSIONS, PERMISSION_GROUPS, STAFF_ROLES, StaffAccount, grantableFor, toStaff } from '../models/StaffAccount.js'
+import { can, canSeeMembers, currentActor, superAdminOnly } from '../services/adminAuth.js'
 import { missionFigures, summarize } from '../services/ledger.js'
 import { hashPassword, passwordProblem, verifyPassword } from '../services/password.js'
 
@@ -28,7 +28,7 @@ const gate = (permission) => async (req, res, next) => {
   try {
     const actor = await currentActor(req)
     if (!actor) return res.status(401).json({ error: 'Unauthorized' })
-    if (permission && !can(actor, permission) && actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (permission && !can(actor, permission)) return res.status(403).json({ error: 'Forbidden' })
     req.actor = actor
     next()
   } catch (error) {
@@ -55,7 +55,7 @@ commandRouter.get('/summary', async (req, res, next) => {
       Registration.countDocuments({ kind: 'membership', status: { $in: ['approved', 'accepted', 'active'] } }),
       AuditEvent.find().sort({ createdAt: -1 }).limit(8).lean(),
     ])
-    const financeAllowed = req.actor.role === 'admin' || can(req.actor, 'finance.record') || can(req.actor, 'finance.approve')
+    const financeAllowed = can(req.actor, 'finance.record') || can(req.actor, 'finance.approve')
     const finance = financeAllowed ? summarize(book.opening, entries) : null
     const byStatus = Object.fromEntries(MISSION_STATUSES.map((status) => [status, missions.filter((item) => item.status === status).length]))
     const missionRows = missions.map((mission) => toMission(mission, financeAllowed ? missionFigures(mission, entries) : null))
@@ -67,7 +67,7 @@ commandRouter.get('/summary', async (req, res, next) => {
       missions: { total: missions.length, ...byStatus, items: missionRows.slice(0, 8) },
       members,
       deadlines,
-      activity: req.actor.role === 'admin' ? recentAudit.map(toAudit) : [],
+      activity: can(req.actor, 'audit.read') ? recentAudit.map(toAudit) : [],
       pendingExpenses: financeAllowed ? entries.filter((entry) => entry.kind === 'expense' && entry.status === 'posted' && !entry.approvedAt).length : 0,
     })
   } catch (error) {
@@ -81,10 +81,12 @@ commandRouter.get('/search', async (req, res, next) => {
     if (q.length < 2) return res.json({ applications: [], missions: [] })
     const pattern = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
     const [applications, missions] = await Promise.all([
-      Registration.find({ $or: [{ firstName: pattern }, { lastName: pattern }, { city: pattern }, { email: pattern }] })
-        .sort({ createdAt: -1 })
-        .limit(8)
-        .lean(),
+      canSeeMembers(req.actor)
+        ? Registration.find({ $or: [{ firstName: pattern }, { lastName: pattern }, { city: pattern }, { email: pattern }] })
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .lean()
+        : [],
       OpsMission.find({ $or: [{ title: pattern }, { location: pattern }, { category: pattern }] })
         .sort({ updatedAt: -1 })
         .limit(8)
@@ -105,7 +107,7 @@ commandRouter.get('/missions', async (req, res, next) => {
     const filter = MISSION_STATUSES.includes(status) ? { status } : {}
     const [docs, entries] = await Promise.all([OpsMission.find(filter).sort({ plannedAt: 1, createdAt: -1 }).lean(), LedgerEntry.find().lean()])
     const items = docs.map((doc) => toMission(doc, missionFigures(doc, entries)))
-    if (req.actor.role === 'staff' && !can(req.actor, 'missions.manage')) {
+    if (!can(req.actor, 'missions.manage')) {
       const name = req.actor.name.toLowerCase()
       return res.json({ items: items.filter((item) => item.assignees.some((person) => person.toLowerCase() === name)) })
     }
@@ -168,7 +170,7 @@ commandRouter.patch('/missions/:id', gate('missions.manage'), async (req, res, n
 
 commandRouter.get('/ledger', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin' && !can(req.actor, 'finance.record') && !can(req.actor, 'finance.approve')) {
+    if (!can(req.actor, 'finance.record') && !can(req.actor, 'finance.approve')) {
       return res.status(403).json({ error: 'Forbidden' })
     }
     const filter = { status: { $in: ['posted', 'reversed'] } }
@@ -189,7 +191,7 @@ commandRouter.get('/ledger', async (req, res, next) => {
 
 commandRouter.post('/book', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'finance.approve')) return res.status(403).json({ error: 'Forbidden' })
     const opening = money(req.body?.opening)
     if (!Number.isFinite(opening) || opening < 0) return res.status(422).json({ error: 'Invalid amount' })
     const existing = await LedgerEntry.countDocuments()
@@ -204,7 +206,7 @@ commandRouter.post('/book', async (req, res, next) => {
 
 commandRouter.post('/ledger', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin' && !can(req.actor, 'finance.record')) return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'finance.record')) return res.status(403).json({ error: 'Forbidden' })
     const kind = req.body?.kind
     if (!['income', 'expense', 'transfer'].includes(kind)) return res.status(422).json({ error: 'Invalid transaction' })
     const amount = money(req.body?.amount)
@@ -234,7 +236,7 @@ commandRouter.post('/ledger', async (req, res, next) => {
 
 commandRouter.post('/ledger/:id/approve', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin' && !can(req.actor, 'finance.approve')) return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'finance.approve')) return res.status(403).json({ error: 'Forbidden' })
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Transaction not found' })
     const doc = await LedgerEntry.findById(req.params.id)
     if (!doc || doc.status !== 'posted') return res.status(404).json({ error: 'Transaction not found' })
@@ -250,7 +252,7 @@ commandRouter.post('/ledger/:id/approve', async (req, res, next) => {
 
 commandRouter.post('/ledger/:id/reverse', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin' && !can(req.actor, 'finance.approve')) return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'finance.approve')) return res.status(403).json({ error: 'Forbidden' })
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Transaction not found' })
     const reason = text(req.body?.reason, 300)
     if (reason.length < 3) return res.status(422).json({ error: 'A reason is required' })
@@ -285,7 +287,7 @@ commandRouter.post('/ledger/:id/reverse', async (req, res, next) => {
 
 commandRouter.get('/ledger.csv', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin' && !can(req.actor, 'finance.record')) return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'finance.record')) return res.status(403).json({ error: 'Forbidden' })
     const docs = await LedgerEntry.find().sort({ date: 1 }).lean()
     const lines = ['date,kind,amount,currency,description,category,mission,method,actor,status']
     docs.forEach((doc) => {
@@ -301,7 +303,7 @@ commandRouter.get('/ledger.csv', async (req, res, next) => {
 
 commandRouter.get('/audit', async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'audit.read')) return res.status(403).json({ error: 'Forbidden' })
     const q = text(req.query.q, 80)
     const filter = q ? { $or: [{ action: new RegExp(q, 'i') }, { actor: new RegExp(q, 'i') }, { detail: new RegExp(q, 'i') }] } : {}
     const docs = await AuditEvent.find(filter).sort({ createdAt: -1 }).limit(200).lean()
@@ -311,29 +313,39 @@ commandRouter.get('/audit', async (req, res, next) => {
   }
 })
 
-commandRouter.get('/staff', async (req, res, next) => {
+/* ── Team accounts: only the Super Admin creates accounts or changes roles and permissions ── */
+
+/** Returns the requested list when every entry exists and may be granted to `role`, otherwise null. */
+const readPermissions = (value, role) => {
+  if (!Array.isArray(value) || value.length > ALL_PERMISSIONS.length * 2) return null
+  const list = [...new Set(value.filter((item) => typeof item === 'string'))]
+  const allowed = grantableFor(role)
+  return list.length === value.length && list.every((item) => allowed.includes(item)) ? list : null
+}
+
+const catalog = { groups: PERMISSION_GROUPS, adminOnly: ADMIN_ONLY_PERMISSIONS, roles: STAFF_ROLES }
+
+commandRouter.get('/staff', superAdminOnly, async (_req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     const docs = await StaffAccount.find().sort({ createdAt: -1 }).lean()
-    res.json({ items: docs.map(toStaff), permissions: STAFF_PERMISSIONS })
+    res.json({ items: docs.map(toStaff), catalog })
   } catch (error) {
     next(error)
   }
 })
 
-commandRouter.post('/staff', async (req, res, next) => {
+commandRouter.post('/staff', superAdminOnly, async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     const name = text(req.body?.name, 80)
     const email = text(req.body?.email, 254).toLowerCase()
-    const role = STAFF_ROLES.includes(req.body?.role) ? req.body.role : 'staff'
+    const role = req.body?.role === undefined ? 'staff' : req.body.role
+    if (!STAFF_ROLES.includes(role)) return res.status(422).json({ error: 'role' })
     const problem = name.length < 2 ? 'name' : !EMAIL.test(email) ? 'email' : passwordProblem(req.body?.password)
     if (problem) return res.status(422).json({ error: problem })
-    const permissions = (Array.isArray(req.body?.permissions) ? req.body.permissions : ['recruitment.review']).filter((item) =>
-      STAFF_PERMISSIONS.includes(item),
-    )
-    const doc = await StaffAccount.create({ name, email, role, permissions, passwordHash: await hashPassword(req.body.password) })
-    await recordAudit(req.actor, 'staff.create', 'staff', doc._id, `${name} ${role}`)
+    const permissions = readPermissions(req.body?.permissions ?? ['recruitment.review'], role)
+    if (!permissions) return res.status(422).json({ error: 'permissions' })
+    const doc = await StaffAccount.create({ name, email, role, permissions, permissionsSet: true, passwordHash: await hashPassword(req.body.password) })
+    await recordAudit(req.actor, 'staff.create', 'staff', doc._id, `${name} ${role} [${permissions.join(', ')}]`)
     res.status(201).json({ item: toStaff(doc) })
   } catch (error) {
     if (error?.code === 11000) return res.status(409).json({ error: 'Email already used' })
@@ -341,25 +353,44 @@ commandRouter.post('/staff', async (req, res, next) => {
   }
 })
 
-commandRouter.patch('/staff/:id', async (req, res, next) => {
+commandRouter.patch('/staff/:id', superAdminOnly, async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Account not found' })
     const doc = await StaffAccount.findById(req.params.id)
     if (!doc) return res.status(404).json({ error: 'Account not found' })
-    if (STAFF_ROLES.includes(req.body?.role)) doc.role = req.body.role
-    if (typeof req.body?.active === 'boolean') doc.active = req.body.active
-    if (Array.isArray(req.body?.permissions)) doc.permissions = req.body.permissions.filter((item) => STAFF_PERMISSIONS.includes(item))
+    const before = toStaff(doc)
+    const role = req.body?.role === undefined ? doc.role : req.body.role
+    if (!STAFF_ROLES.includes(role)) return res.status(422).json({ error: 'role' })
+    let permissions = null
+    if (req.body?.permissions !== undefined) {
+      permissions = readPermissions(req.body.permissions, role)
+      if (!permissions) return res.status(422).json({ error: 'permissions' })
+    } else if (role !== doc.role) {
+      permissions = before.permissions.filter((item) => grantableFor(role).includes(item))
+    }
     if (typeof req.body?.password === 'string' && req.body.password) {
       const problem = passwordProblem(req.body.password)
       if (problem) return res.status(422).json({ error: problem })
       doc.passwordHash = await hashPassword(req.body.password)
       doc.sessionVersion += 1
     }
-    if (req.body?.active === false) doc.sessionVersion += 1
+    doc.role = role
+    if (permissions) {
+      doc.permissions = permissions
+      doc.permissionsSet = true
+    }
+    if (typeof req.body?.active === 'boolean') {
+      if (doc.active && !req.body.active) doc.sessionVersion += 1
+      doc.active = req.body.active
+    }
     await doc.save()
-    await recordAudit(req.actor, 'staff.update', 'staff', doc._id, doc.email)
-    res.json({ item: toStaff(doc) })
+    const after = toStaff(doc)
+    if (before.role !== after.role) await recordAudit(req.actor, 'staff.role', 'staff', doc._id, `${doc.email}: ${before.role} → ${after.role}`)
+    if (before.permissions.join() !== after.permissions.join()) {
+      await recordAudit(req.actor, 'staff.permissions', 'staff', doc._id, `${doc.email}: [${after.permissions.join(', ')}]`)
+    }
+    if (before.active !== after.active) await recordAudit(req.actor, after.active ? 'staff.activate' : 'staff.deactivate', 'staff', doc._id, doc.email)
+    res.json({ item: after })
   } catch (error) {
     next(error)
   }

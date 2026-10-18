@@ -2,15 +2,20 @@ import { Router } from 'express'
 import mongoose from 'mongoose'
 import { CATEGORIES } from '../../shared/catalog.js'
 import { Story, toStory } from '../models/Story.js'
-import { currentActor } from '../services/adminAuth.js'
+import { can, currentActor } from '../services/adminAuth.js'
 
 export const storiesAdminRouter = Router()
 
 storiesAdminRouter.use(async (req, res, next) => {
-  const actor = await currentActor(req)
-  if (!actor) return res.status(401).json({ error: 'Unauthorized' })
-  if (actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
-  next()
+  try {
+    const actor = await currentActor(req)
+    if (!actor) return res.status(401).json({ error: 'Unauthorized' })
+    if (!can(actor, 'content.manage')) return res.status(403).json({ error: 'Forbidden' })
+    req.actor = actor
+    next()
+  } catch (error) {
+    next(error)
+  }
 })
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

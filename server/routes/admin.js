@@ -21,6 +21,7 @@ import {
   currentActor,
   isAuthenticated,
   isCurrentPassword,
+  isSuperAdmin,
   loadAdminAccount,
   loginBlocked,
   openSession,
@@ -90,6 +91,7 @@ adminRouter.get('/session', async (req, res, next) => {
       role: actor?.role || '',
       name: actor?.name || '',
       permissions: actor?.permissions || [],
+      superAdmin: isSuperAdmin(actor),
     })
   } catch (error) {
     next(error)
@@ -121,7 +123,7 @@ adminRouter.post('/session', async (req, res, next) => {
     }
     clearFailures(key)
     openSession(req, res)
-    res.json({ authenticated: true, role: 'admin', name: 'Admin' })
+    res.json({ authenticated: true, role: 'superadmin', name: 'Super Admin' })
   } catch (error) {
     next(error)
   }
@@ -192,7 +194,7 @@ adminRouter.use('/ops', commandRouter)
 
 adminRouter.post('/password/change', async (req, res, next) => {
   try {
-    if (req.actor?.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (!isSuperAdmin(req.actor)) return res.status(403).json({ error: 'Forbidden' })
     const key = req.ip || 'unknown'
     if (loginBlocked(key)) return res.status(429).json({ error: 'Too many attempts' })
     const { current, password, confirm } = req.body || {}
@@ -223,13 +225,20 @@ adminRouter.get('/stream', (req, res) => {
   res.set({ 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })
   res.flushHeaders()
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+  // Applicant names travel in these events, so they only reach accounts allowed to see members.
+  let members = canSeeMembers(req.actor)
+  const forward = (event, data) => {
+    if (!members && (event === 'registration' || event === 'notifications' || event === 'application')) return
+    send(event, data)
+  }
   res.write('retry: 4000\n\n')
   send('ready', { at: Date.now() })
-  const unsubscribe = subscribe(send)
+  const unsubscribe = subscribe(forward)
   const heartbeat = setInterval(() => {
     currentActor(req)
       .then((actor) => {
         if (res.writableEnded) return
+        members = canSeeMembers(actor)
         if (actor) return res.write(': ping\n\n')
         send('expired', {})
         res.end()
@@ -418,7 +427,7 @@ adminRouter.patch('/registrations/:id', recruitment, async (req, res, next) => {
 /** Removes one application with its portrait and notifications. Irreversible, so it is limited to the administrator. */
 adminRouter.delete('/registrations/:id', recruitment, async (req, res, next) => {
   try {
-    if (req.actor.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
+    if (!can(req.actor, 'recruitment.delete')) return res.status(403).json({ error: 'Forbidden' })
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findOneAndDelete({ _id: req.params.id }).lean()
     if (!doc) return notFound(res)
