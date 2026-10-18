@@ -4,6 +4,7 @@ import { connectDB, dbState, disconnectDB } from './configs/db.js'
 import { migrateLegacyStatuses } from './models/Registration.js'
 import { adminRouter } from './routes/admin.js'
 import { marketRouter } from './routes/market.js'
+import { mediaRouter } from './routes/media.js'
 import { newsRouter } from './routes/news.js'
 import { registrationsRouter } from './routes/registrations.js'
 import { storiesRouter } from './routes/stories.js'
@@ -39,6 +40,7 @@ app.use('/api/market', marketRouter)
 app.use('/api/news', newsRouter)
 app.use('/api/registrations', registrationsRouter)
 app.use('/api/stories', storiesRouter)
+app.use('/api/media', mediaRouter)
 app.use('/api/admin', adminRouter)
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }))

@@ -47,6 +47,30 @@ export const adminApi = {
   stories: (signal) => request('/stories', { signal }),
   saveStory: (story) => request(story.id ? `/stories/${encodeURIComponent(story.id)}` : '/stories', { method: story.id ? 'PATCH' : 'POST', body: story }),
   deleteStory: (id) => request(`/stories/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  orderStories: (kind, ids) => request('/stories/order', { method: 'PUT', body: { kind, ids } }),
+  uploadStoryImage: (blob, onProgress) =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', '/api/admin/stories/media')
+      xhr.withCredentials = true
+      xhr.setRequestHeader('content-type', blob.type)
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress?.(event.loaded / event.total)
+      }
+      xhr.onload = () => {
+        let data = {}
+        try {
+          data = JSON.parse(xhr.responseText || '{}')
+        } catch {
+          data = {}
+        }
+        if (xhr.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+        else reject(Object.assign(new Error(data.error || `HTTP ${xhr.status}`), { status: xhr.status, body: data }))
+      }
+      xhr.onerror = () => reject(Object.assign(new Error('network'), { status: 0, body: {} }))
+      xhr.send(blob)
+    }),
   notifications: (filter, signal) => request(`/notifications?filter=${filter}&limit=60`, { signal }),
   readAll: () => request('/notifications/read', { method: 'POST', body: { all: true } }),
   setRead: (id, read) => request(`/notifications/${encodeURIComponent(id)}`, { method: 'PATCH', body: { read } }),

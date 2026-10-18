@@ -1,255 +1,276 @@
 import { useEffect, useMemo, useState } from 'react'
 import { STORIES } from '../../../shared/catalog.js'
+import { MEMBERSHIP_LAUNCH } from '../config/site'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
+import { CONTENT_COPY, fill } from './contentCopy'
+import { ChevronIcon, SearchIcon } from './icons'
+import { ErrorState } from './parts'
+import { StoryEditor } from './StoryEditor'
 
-const MEDIA = [...new Set(STORIES.flatMap((story) => [story.cover, ...story.images.map((image) => image.src)]))]
+const LIBRARY = [...new Set(STORIES.flatMap((story) => [story.cover, ...story.images.map((image) => image.src)]).filter(Boolean))]
+const DEFAULT_LIMITS = { images: 24 }
 
-const COPY = {
-  fr: {
-    title: 'Archives publiques',
-    lead: 'Missions et activités affichées sur le site. Une histoire dépubliée disparaît du site, pas des candidatures.',
-    new: 'Nouvelle histoire',
-    save: 'Enregistrer',
-    saving: 'Enregistrement…',
-    remove: 'Supprimer',
-    published: 'Publiée',
-    featured: 'À la une',
-    kind: 'Type',
-    mission: 'Mission',
-    activity: 'Activité',
-    empty: 'Aucune histoire pour le moment.',
-    saved: 'Enregistré.',
-    failed: 'Enregistrement impossible.',
-  },
-  en: {
-    title: 'Public archive',
-    lead: 'Missions and activities shown on the site. Unpublishing hides a story. It does not touch applications.',
-    new: 'New story',
-    save: 'Save',
-    saving: 'Saving…',
-    remove: 'Delete',
-    published: 'Published',
-    featured: 'Featured',
-    kind: 'Type',
-    mission: 'Mission',
-    activity: 'Activity',
-    empty: 'No stories yet.',
-    saved: 'Saved.',
-    failed: 'Could not save.',
-  },
-  ar: {
-    title: 'الأرشيف العام',
-    lead: 'المهام والأنشطة الظاهرة في الموقع. إلغاء النشر يخفي القصة ولا يمس طلبات الانضمام.',
-    new: 'قصة جديدة',
-    save: 'حفظ',
-    saving: 'جارٍ الحفظ…',
-    remove: 'حذف',
-    published: 'منشورة',
-    featured: 'مختارة',
-    kind: 'النوع',
-    mission: 'مهمة',
-    activity: 'نشاط',
-    empty: 'لا قصص بعد.',
-    saved: 'تم الحفظ.',
-    failed: 'تعذر الحفظ.',
-  },
+const move = (list, from, to) => {
+  if (to < 0 || to >= list.length || from === to) return list
+  const next = [...list]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
 }
 
-const blank = () => ({
-  kind: 'mission',
-  slug: '',
-  title: '',
-  summary: '',
-  body: '',
-  category: '',
-  location: '',
-  year: '',
-  featured: false,
-  published: false,
-  sort: 200,
-  cover: MEDIA[0] || '',
-  images: [],
-})
+const bySort = (a, b) => (a.sort || 0) - (b.sort || 0) || a.title.localeCompare(b.title)
 
 export const ContentDesk = () => {
   const { locale } = useI18n()
-  const copy = COPY[locale] || COPY.fr
-  const [items, setItems] = useState([])
-  const [categories, setCategories] = useState(null)
-  const [draft, setDraft] = useState(null)
+  const copy = CONTENT_COPY[locale] || CONTENT_COPY.fr
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const [kind, setKind] = useState('mission')
+  const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
-  const [error, setError] = useState('')
+  const [category, setCategory] = useState('')
+  const [editing, setEditing] = useState(null)
+  const [ordering, setOrdering] = useState(null)
+  const [dragging, setDragging] = useState(-1)
+  const [notice, setNotice] = useState(null)
+  const [busy, setBusy] = useState(false)
 
   const load = () =>
-    adminApi.stories().then((data) => {
-      setItems(data.items)
-      setCategories(data.categories)
-    })
+    adminApi
+      .stories()
+      .then((result) => {
+        setData(result)
+        setError(null)
+      })
+      .catch(setError)
 
   useEffect(() => {
-    let live = true
-    adminApi.stories().then((data) => {
-      if (!live) return
-      setItems(data.items)
-      setCategories(data.categories)
-    })
-    return () => {
-      live = false
-    }
+    load()
   }, [])
 
-  const options = useMemo(() => categories?.[draft?.kind] || [], [categories, draft?.kind])
-
-  const edit = (item) =>
-    setDraft({
-      ...item,
-      body: (item.body || []).join('\n\n'),
-      images: item.images || [],
+  const all = useMemo(() => (data?.items || []).filter((item) => item.kind === kind).sort(bySort), [data, kind])
+  const counts = useMemo(
+    () => ({ mission: (data?.items || []).filter((item) => item.kind === 'mission').length, activity: (data?.items || []).filter((item) => item.kind === 'activity').length }),
+    [data],
+  )
+  const filtered = Boolean(query.trim() || status || category)
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return all.filter((item) => {
+      if (status === 'published' && !item.published) return false
+      if (status === 'draft' && item.published) return false
+      if (status === 'featured' && !item.featured) return false
+      if (category && item.category !== category) return false
+      if (needle && ![item.title, item.location, item.summary, item.slug].some((value) => String(value || '').toLowerCase().includes(needle))) return false
+      return true
     })
+  }, [all, query, status, category])
 
-  const save = async () => {
-    setStatus('saving')
-    setError('')
+  if (error) return <ErrorState error={error} onRetry={load} />
+  if (!data) return <p className="adm-lead">…</p>
+
+  const categories = data.categories || {}
+  const limits = data.limits || DEFAULT_LIMITS
+  const categoryName = (item) => {
+    const found = categories[item.kind]?.find((entry) => entry.id === item.category)
+    return found ? found[locale] || found.fr : ''
+  }
+
+  if (editing) {
+    return (
+      <StoryEditor
+        key={editing.story?.id || `new-${editing.kind}`}
+        copy={copy}
+        locale={locale}
+        categories={categories}
+        limits={limits}
+        library={LIBRARY}
+        story={editing.story}
+        kind={editing.kind}
+        onSaved={(item) => {
+          setData((current) => ({ ...current, items: [...current.items.filter((row) => row.id !== item.id), item] }))
+          setKind(item.kind)
+        }}
+        onDeleted={(id) => {
+          setData((current) => ({ ...current, items: current.items.filter((row) => row.id !== id) }))
+          setEditing(null)
+        }}
+        onClose={() => setEditing(null)}
+      />
+    )
+  }
+
+  const rows = ordering || visible
+
+  const saveOrder = async () => {
+    setBusy(true)
+    setNotice(null)
     try {
-      const body = {
-        ...draft,
-        body: draft.body.split(/\n{2,}/),
-        images: (draft.images || []).map((image) => (typeof image === 'string' ? { src: image, alt: draft.title, caption: '' } : image)),
-      }
-      await adminApi.saveStory(body)
-      await load()
-      setStatus('saved')
+      const { items } = await adminApi.orderStories(kind, ordering.map((item) => item.id))
+      setData((current) => ({ ...current, items }))
+      setOrdering(null)
+      setNotice({ tone: 'ok', text: copy.orderSaved })
     } catch (err) {
-      setStatus('')
-      setError(err.body?.error || copy.failed)
+      setNotice({ tone: 'error', text: err.status === 409 ? copy.errors.order : err.status === 403 ? copy.errors.forbidden : copy.errors.save })
+    } finally {
+      setBusy(false)
     }
-  }
-
-  const remove = async () => {
-    if (!draft?.id) return setDraft(null)
-    await adminApi.deleteStory(draft.id)
-    setDraft(null)
-    await load()
-  }
-
-  const toggleImage = (src) => {
-    const has = draft.images.some((image) => image.src === src)
-    const images = has ? draft.images.filter((image) => image.src !== src) : [...draft.images, { src, alt: draft.title, caption: '' }]
-    setDraft({ ...draft, images, cover: draft.cover || src })
   }
 
   return (
-    <section className="adm-panel adm-desk">
-      <header className="adm-page-head">
+    <div className="adm-view cms">
+      <header className="adm-view-head cms-head">
         <div>
-          <p className="adm-kicker">{copy.kind}</p>
-          <h1>{copy.title}</h1>
+          <p className="kicker">{copy.kicker}</p>
+          <h1 className="adm-title">{copy.title}</h1>
           <p className="adm-lead">{copy.lead}</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setDraft(blank())}>
-          {copy.new}
+        <button type="button" className="btn btn-primary" onClick={() => setEditing({ story: null, kind })} disabled={Boolean(ordering)}>
+          {copy.newItem[kind]}
         </button>
       </header>
-      <div className="adm-split" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 320px) 1fr', gap: 20 }}>
-        <ul style={{ display: 'grid', gap: 8 }}>
-          {!items.length ? <li>{copy.empty}</li> : null}
-          {items.map((item) => (
-            <li key={item.id}>
-              <button type="button" className="btn btn-ghost" onClick={() => edit(item)} aria-current={draft?.id === item.id ? 'true' : undefined} style={{ width: '100%', justifyContent: 'space-between' }}>
-                <span>{item.title}</span>
-                <small>{item.published ? '●' : '○'}</small>
+
+      {MEMBERSHIP_LAUNCH ? <p className="team-rule cms-launch">{copy.launchNote}</p> : null}
+
+      <div className="cms-tabs" role="tablist" aria-label={copy.title}>
+        {['mission', 'activity'].map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={kind === value}
+            className="cms-tab"
+            disabled={Boolean(ordering)}
+            onClick={() => {
+              setKind(value)
+              setCategory('')
+              setNotice(null)
+            }}
+          >
+            {copy.tabs[value]}
+            <span>{counts[value]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="cms-toolbar">
+        <label className="adm-search cms-search">
+          <SearchIcon />
+          <span className="sr-only">{copy.search}</span>
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} disabled={Boolean(ordering)} />
+        </label>
+        <div className="cms-filters adm-filters">
+          <label>
+            <span className="sr-only">{copy.filters.all}</span>
+            <select value={status} onChange={(event) => setStatus(event.target.value)} disabled={Boolean(ordering)}>
+              {['', 'published', 'draft', 'featured'].map((value) => (
+                <option key={value || 'all'} value={value}>
+                  {value ? copy.filters[value] : copy.filters.all}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">{copy.allCategories}</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={Boolean(ordering)}>
+              <option value="">{copy.allCategories}</option>
+              {(categories[kind] || []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item[locale] || item.fr}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {!ordering ? (
+          <button type="button" className="btn btn-sm cms-reorder" onClick={() => setOrdering(all)} disabled={filtered || all.length < 2} title={filtered ? copy.reorderFiltered : undefined}>
+            {copy.reorder}
+          </button>
+        ) : null}
+      </div>
+
+      {filtered && !ordering ? <p className="cms-hint">{copy.reorderFiltered}</p> : null}
+      {ordering ? (
+        <div className="cms-orderbar" role="region" aria-label={copy.reorder}>
+          <p>{copy.reorderHint}</p>
+          <span>
+            <button type="button" className="btn btn-sm" onClick={() => setOrdering(null)} disabled={busy}>
+              {copy.confirm.cancel}
+            </button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={saveOrder} disabled={busy} aria-busy={busy}>
+              {busy ? copy.saving : copy.saveOrder}
+            </button>
+          </span>
+        </div>
+      ) : null}
+      {notice ? (
+        <p className={notice.tone === 'ok' ? 'adm-flash is-ok' : 'adm-alert'} role={notice.tone === 'ok' ? 'status' : 'alert'}>
+          {notice.text}
+        </p>
+      ) : null}
+
+      {rows.length ? (
+        <ol className={`cms-list${ordering ? ' is-ordering' : ''}`}>
+          {rows.map((item, index) => (
+            <li
+              key={item.id}
+              className={`cms-row${dragging === index ? ' is-dragging' : ''}`}
+              draggable={Boolean(ordering)}
+              onDragStart={(event) => {
+                setDragging(index)
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('text/plain', item.id)
+              }}
+              onDragOver={(event) => {
+                if (!ordering || dragging < 0) return
+                event.preventDefault()
+                if (dragging !== index) {
+                  setOrdering((list) => move(list, dragging, index))
+                  setDragging(index)
+                }
+              }}
+              onDragEnd={() => setDragging(-1)}
+              onDrop={(event) => {
+                event.preventDefault()
+                setDragging(-1)
+              }}
+            >
+              {ordering ? (
+                <span className="cms-row-order">
+                  <span className="cms-grip" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="cms-row-index">{index + 1}</span>
+                  <button type="button" className="adm-icon-btn is-sm" disabled={index === 0 || busy} onClick={() => setOrdering((list) => move(list, index, index - 1))} aria-label={`${copy.moveUp} — ${item.title}`}>
+                    <ChevronIcon className="cms-chevron is-up" />
+                  </button>
+                  <button type="button" className="adm-icon-btn is-sm" disabled={index === rows.length - 1 || busy} onClick={() => setOrdering((list) => move(list, index, index + 1))} aria-label={`${copy.moveDown} — ${item.title}`}>
+                    <ChevronIcon className="cms-chevron is-down" />
+                  </button>
+                </span>
+              ) : null}
+              <button type="button" className="cms-row-main" onClick={() => (ordering ? null : setEditing({ story: item, kind: item.kind }))} tabIndex={ordering ? -1 : 0} aria-label={`${copy.edit} — ${item.title}`}>
+                <span className="cms-thumb">{item.cover ? <img src={item.cover} alt="" loading="lazy" /> : <span>{copy.noImage}</span>}</span>
+                <span className="cms-row-copy">
+                  <strong dir="auto">{item.title}</strong>
+                  <small dir="auto">{[categoryName(item), item.location, item.year].filter(Boolean).join(' · ') || item.slug}</small>
+                </span>
+                <span className="cms-row-meta">
+                  <span className={`cms-pill ${item.published ? 'is-live' : 'is-draft'}`}>{item.published ? copy.status.published : copy.status.draft}</span>
+                  {item.featured ? <span className="cms-pill is-featured">{copy.status.featured}</span> : null}
+                  <span className="cms-row-count">{fill(copy.imageCount, { n: item.images.length || (item.cover ? 1 : 0) })}</span>
+                </span>
+                {!ordering ? <ChevronIcon className="cms-row-go" /> : null}
               </button>
             </li>
           ))}
-        </ul>
-        {draft ? (
-          <form
-            className="adm-block"
-            onSubmit={(event) => {
-              event.preventDefault()
-              save()
-            }}
-            style={{ display: 'grid', gap: 10 }}
-          >
-            <label>
-              {copy.kind}
-              <select value={draft.kind} onChange={(event) => setDraft({ ...draft, kind: event.target.value, category: '' })}>
-                <option value="mission">{copy.mission}</option>
-                <option value="activity">{copy.activity}</option>
-              </select>
-            </label>
-            <label>
-              Slug
-              <input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} required />
-            </label>
-            <label>
-              Titre
-              <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} required />
-            </label>
-            <label>
-              Résumé
-              <textarea rows={3} value={draft.summary} onChange={(event) => setDraft({ ...draft, summary: event.target.value })} />
-            </label>
-            <label>
-              Texte
-              <textarea rows={8} value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} />
-            </label>
-            <label>
-              Catégorie
-              <select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>
-                <option value="">—</option>
-                {options.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.fr}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Lieu
-              <input value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} />
-            </label>
-            <label>
-              Année
-              <input value={draft.year} onChange={(event) => setDraft({ ...draft, year: event.target.value })} inputMode="numeric" />
-            </label>
-            <label>
-              Ordre
-              <input type="number" value={draft.sort} onChange={(event) => setDraft({ ...draft, sort: Number(event.target.value) })} />
-            </label>
-            <label>
-              <input type="checkbox" checked={draft.published} onChange={(event) => setDraft({ ...draft, published: event.target.checked })} /> {copy.published}
-            </label>
-            <label>
-              <input type="checkbox" checked={draft.featured} onChange={(event) => setDraft({ ...draft, featured: event.target.checked })} /> {copy.featured}
-            </label>
-            <fieldset>
-              <legend>Images</legend>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
-                {MEDIA.map((src) => {
-                  const on = draft.images.some((image) => image.src === src) || draft.cover === src
-                  return (
-                    <button key={src} type="button" onClick={() => toggleImage(src)} aria-pressed={on} style={{ padding: 0, border: on ? '2px solid var(--green-bright)' : '2px solid transparent' }}>
-                      <img src={src} alt="" style={{ width: '100%', height: 72, objectFit: 'cover' }} />
-                    </button>
-                  )
-                })}
-              </div>
-            </fieldset>
-            <div className="adm-actions">
-              <button className="btn btn-primary" type="submit" disabled={status === 'saving'}>
-                {status === 'saving' ? copy.saving : copy.save}
-              </button>
-              <button className="btn btn-ghost" type="button" onClick={remove}>
-                {copy.remove}
-              </button>
-            </div>
-            {status === 'saved' ? <p role="status">{copy.saved}</p> : null}
-            {error ? <p role="alert">{error}</p> : null}
-          </form>
-        ) : null}
-      </div>
-    </section>
+        </ol>
+      ) : (
+        <p className="adm-empty">{filtered ? copy.empty : copy.none[kind]}</p>
+      )}
+    </div>
   )
 }
