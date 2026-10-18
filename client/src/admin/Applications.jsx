@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
+import { DateField } from './DatePicker'
 import { formatClock, formatCount, formatDate, formatMoney, fullName } from './format'
 import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon, TrashIcon } from './icons'
 import { STATUS_ORDER } from './hooks'
@@ -296,11 +297,11 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
         </label>
         <label>
           <span>{a('table.from')}</span>
-          <input type="date" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} />
+          <DateField id="adm-filter-from" value={from} max={to || undefined} onChange={setFrom} />
         </label>
         <label>
           <span>{a('table.to')}</span>
-          <input type="date" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} />
+          <DateField id="adm-filter-to" value={to} min={from || undefined} onChange={setTo} />
         </label>
       </div>
 

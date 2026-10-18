@@ -37,6 +37,7 @@ export const TeamDesk = () => {
   const [notice, setNotice] = useState(null)
   const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState('')
+  const [invalid, setInvalid] = useState('')
 
   const load = () => adminApi.staff().then(setData).catch(setError)
   useEffect(() => {
@@ -83,9 +84,11 @@ export const TeamDesk = () => {
           const email = form.email.trim()
           const problem = name.length < 2 ? 'name' : !EMAIL.test(email) ? 'email' : problemOf(form.password)
           if (problem) {
+            setInvalid(problem === 'name' || problem === 'email' ? problem : 'password')
             setNotice({ tone: 'error', text: MESSAGES[problem] })
             return
           }
+          setInvalid('')
           setSaving(true)
           setNotice(null)
           try {
@@ -94,29 +97,58 @@ export const TeamDesk = () => {
             setNotice({ tone: 'ok', text: `Compte ${item.role === 'admin' ? 'administrateur' : 'staff'} créé pour ${item.name}.` })
             load()
           } catch (err) {
+            const code = err?.body?.error
+            setInvalid(err?.status === 409 || code === 'email' ? 'email' : code === 'name' ? 'name' : ['short', 'long', 'weak'].includes(code) ? 'password' : '')
             setNotice({ tone: 'error', text: messageFor(err) })
           } finally {
             setSaving(false)
           }
         }}
       >
-        <input required placeholder="Nom" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="off" />
-        <input required type="email" placeholder="E-mail" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} autoComplete="off" />
-        <input
-          required
-          type="password"
-          placeholder="Mot de passe (12 caractères min.)"
-          value={form.password}
-          minLength={12}
-          maxLength={128}
-          onChange={(event) => setForm({ ...form, password: event.target.value })}
-          autoComplete="new-password"
-          aria-describedby="team-password-rules"
-        />
-        <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} aria-label="Rôle">
-          <option value="staff">Staff</option>
-          <option value="admin">Admin</option>
-        </select>
+        <label className="cmd-field">
+          <span>Nom</span>
+          <input
+            required
+            value={form.name}
+            aria-invalid={invalid === 'name' || undefined}
+            onChange={(event) => setForm({ ...form, name: event.target.value })}
+            autoComplete="off"
+          />
+        </label>
+        <label className="cmd-field">
+          <span>E-mail</span>
+          <input
+            required
+            type="email"
+            placeholder="nom@exemple.com"
+            value={form.email}
+            aria-invalid={invalid === 'email' || undefined}
+            onChange={(event) => setForm({ ...form, email: event.target.value })}
+            autoComplete="off"
+          />
+        </label>
+        <label className="cmd-field">
+          <span>Mot de passe</span>
+          <input
+            required
+            type="password"
+            placeholder="12 caractères minimum"
+            value={form.password}
+            minLength={12}
+            maxLength={128}
+            aria-invalid={invalid === 'password' || undefined}
+            onChange={(event) => setForm({ ...form, password: event.target.value })}
+            autoComplete="new-password"
+            aria-describedby="team-password-rules"
+          />
+        </label>
+        <label className="cmd-field">
+          <span>Rôle</span>
+          <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+            <option value="staff">Staff</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
         <button className="btn btn-primary btn-sm" type="submit" disabled={saving} aria-busy={saving}>
           {saving ? 'Création…' : 'Créer le compte'}
         </button>

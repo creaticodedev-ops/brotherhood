@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
+import { DateField } from './DatePicker'
 import { formatMoney, relativeTime } from './format'
 import { ErrorState } from './parts'
 
@@ -68,14 +69,38 @@ export const MissionsDesk = () => {
         ))}
       </div>
       <form className="cmd-form" onSubmit={save}>
-        <input required minLength={3} placeholder="Titre" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
-        <input placeholder="Lieu" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
-        <input placeholder="Catégorie" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
-        <input type="date" value={form.plannedAt} onChange={(event) => setForm({ ...form, plannedAt: event.target.value })} />
-        <input placeholder="Budget MAD" inputMode="decimal" value={form.budget} onChange={(event) => setForm({ ...form, budget: event.target.value })} />
-        <input placeholder="Plafond MAD" inputMode="decimal" value={form.limit} onChange={(event) => setForm({ ...form, limit: event.target.value })} />
-        <input placeholder="Responsables, séparés par une virgule" value={form.assignees} onChange={(event) => setForm({ ...form, assignees: event.target.value })} />
-        <textarea placeholder="Objectif" value={form.objectives} onChange={(event) => setForm({ ...form, objectives: event.target.value })} />
+        <label className="cmd-field">
+          <span>Titre</span>
+          <input required minLength={3} placeholder="Nom de la mission" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Lieu</span>
+          <input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Catégorie</span>
+          <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+        </label>
+        <div className="cmd-field">
+          <span id="mission-date-label">Date prévue</span>
+          <DateField id="mission-date" labelledBy="mission-date-label" value={form.plannedAt} onChange={(plannedAt) => setForm({ ...form, plannedAt })} />
+        </div>
+        <label className="cmd-field">
+          <span>Budget (MAD)</span>
+          <input placeholder="0" inputMode="decimal" value={form.budget} onChange={(event) => setForm({ ...form, budget: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Plafond (MAD)</span>
+          <input placeholder="0" inputMode="decimal" value={form.limit} onChange={(event) => setForm({ ...form, limit: event.target.value })} />
+        </label>
+        <label className="cmd-field is-wide">
+          <span>Responsables</span>
+          <input placeholder="Séparés par une virgule" value={form.assignees} onChange={(event) => setForm({ ...form, assignees: event.target.value })} />
+        </label>
+        <label className="cmd-field is-wide">
+          <span>Objectif</span>
+          <textarea value={form.objectives} onChange={(event) => setForm({ ...form, objectives: event.target.value })} />
+        </label>
         <button className="btn btn-primary btn-sm" type="submit">Créer la mission</button>
       </form>
       <ul className="cmd-cards">
@@ -121,11 +146,14 @@ export const MissionsDesk = () => {
               patch(open.id, { note })
             }}
           >
-            <textarea placeholder="Note de suivi" value={note} onChange={(event) => setNote(event.target.value)} />
+            <label className="cmd-field is-wide">
+              <span>Note de suivi</span>
+              <textarea value={note} onChange={(event) => setNote(event.target.value)} />
+            </label>
             <button className="btn btn-sm btn-ghost" type="submit">Ajouter au fil</button>
           </form>
-          <label>
-            Rapport final
+          <label className="cmd-field">
+            <span>Rapport final</span>
             <textarea defaultValue={open.report} onBlur={(event) => patch(open.id, { report: event.target.value })} />
           </label>
         </section>

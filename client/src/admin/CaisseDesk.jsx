@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
+import { DateField } from './DatePicker'
 import { formatMoney, relativeTime } from './format'
 import { ErrorState } from './parts'
 
@@ -73,27 +74,54 @@ export const CaisseDesk = () => {
           }
         }}
       >
-        <input inputMode="decimal" placeholder="Solde d’ouverture MAD" value={opening} onChange={(event) => setOpening(event.target.value)} />
+        <label className="cmd-field">
+          <span>Solde d’ouverture (MAD)</span>
+          <input inputMode="decimal" placeholder="0" value={opening} onChange={(event) => setOpening(event.target.value)} />
+        </label>
         <button className="btn btn-sm btn-ghost" type="submit">Enregistrer l’ouverture</button>
       </form>
       <form className="cmd-form" onSubmit={add}>
-        <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
-          <option value="income">Entrée</option>
-          <option value="expense">Sortie</option>
-          <option value="transfer">Transfert vers une mission</option>
-        </select>
-        <input required inputMode="decimal" placeholder="Montant" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
-        <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
-        <input required minLength={3} placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-        <input placeholder="Catégorie" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
-        <select value={form.mission} onChange={(event) => setForm({ ...form, mission: event.target.value })}>
-          <option value="">Sans mission</option>
-          {missions.map((mission) => (
-            <option key={mission.id} value={mission.id}>{mission.title}</option>
-          ))}
-        </select>
-        <input placeholder="Moyen" value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })} />
-        <input placeholder="Lien du reçu" value={form.receipt} onChange={(event) => setForm({ ...form, receipt: event.target.value })} />
+        <label className="cmd-field">
+          <span>Type</span>
+          <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
+            <option value="income">Entrée</option>
+            <option value="expense">Sortie</option>
+            <option value="transfer">Transfert vers une mission</option>
+          </select>
+        </label>
+        <label className="cmd-field">
+          <span>Montant (MAD)</span>
+          <input required inputMode="decimal" placeholder="0" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
+        </label>
+        <div className="cmd-field">
+          <span id="entry-date-label">Date</span>
+          <DateField id="entry-date" labelledBy="entry-date-label" value={form.date} onChange={(date) => setForm({ ...form, date })} />
+        </div>
+        <label className="cmd-field">
+          <span>Description</span>
+          <input required minLength={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Catégorie</span>
+          <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Mission</span>
+          <select value={form.mission} onChange={(event) => setForm({ ...form, mission: event.target.value })}>
+            <option value="">Sans mission</option>
+            {missions.map((mission) => (
+              <option key={mission.id} value={mission.id}>{mission.title}</option>
+            ))}
+          </select>
+        </label>
+        <label className="cmd-field">
+          <span>Moyen de paiement</span>
+          <input value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })} />
+        </label>
+        <label className="cmd-field">
+          <span>Lien du reçu</span>
+          <input inputMode="url" placeholder="https://" value={form.receipt} onChange={(event) => setForm({ ...form, receipt: event.target.value })} />
+        </label>
         <button className="btn btn-primary btn-sm" type="submit">Enregistrer</button>
       </form>
       <div className="cmd-filters">

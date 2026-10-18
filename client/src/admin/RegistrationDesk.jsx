@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nProvider'
 import { parseZonedInput, resolveRegistration, WINDOW_ZONE, WINDOW_ZONES } from '../../../shared/registrationWindow.js'
 import { RegistrationClock } from '../site/Countdown'
 import { adminApi } from './api'
+import { DateField } from './DatePicker'
 
 const EMPTY = {
   countdownVisible: false,
@@ -288,14 +289,30 @@ export const RegistrationDesk = () => {
                 ))}
               </select>
             </label>
-            <label className="adm-window-field" htmlFor="reg-open">
-              <span>{copy.opens}</span>
-              <input id="reg-open" type="datetime-local" value={form.opensAt} onChange={(event) => set({ opensAt: event.target.value })} />
-            </label>
-            <label className="adm-window-field" htmlFor="reg-close">
-              <span>{copy.closes}</span>
-              <input id="reg-close" type="datetime-local" value={form.closesAt} onChange={(event) => set({ closesAt: event.target.value })} />
-            </label>
+            <div className="adm-window-field">
+              <span id="reg-open-label">{copy.opens}</span>
+              <DateField
+                id="reg-open"
+                mode="datetime"
+                value={form.opensAt}
+                timeZone={form.timeZone}
+                invalid={Boolean(fieldError)}
+                labelledBy="reg-open-label"
+                onChange={(opensAt) => set({ opensAt })}
+              />
+            </div>
+            <div className="adm-window-field">
+              <span id="reg-close-label">{copy.closes}</span>
+              <DateField
+                id="reg-close"
+                mode="datetime"
+                value={form.closesAt}
+                timeZone={form.timeZone}
+                invalid={Boolean(fieldError)}
+                labelledBy="reg-close-label"
+                onChange={(closesAt) => set({ closesAt })}
+              />
+            </div>
             <label className="adm-window-field is-wide" htmlFor="reg-message">
               <span>{copy.message}</span>
               <select id="reg-message" value={form.messagePreset} onChange={(event) => set({ messagePreset: event.target.value })}>
