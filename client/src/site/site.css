@@ -807,6 +807,67 @@ a.film-frame {
   background: var(--line-strong);
 }
 
+.join-form {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transition:
+    opacity 0.35s var(--ease),
+    filter 0.35s var(--ease);
+}
+
+.join-form.is-closed {
+  opacity: 0.4;
+  filter: grayscale(1);
+  user-select: none;
+}
+
+.join-closed {
+  display: grid;
+  gap: 10px;
+  margin: 28px 0 0;
+  padding: 20px 22px;
+  border: 1px solid var(--line-strong);
+  border-inline-start: 2px solid var(--green-bright);
+  border-radius: 16px;
+  background: rgba(5, 6, 5, 0.62);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.join-closed section.clock {
+  margin: 0;
+}
+
+.join-closed-text {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.join-closed-date {
+  margin: 0;
+  color: var(--white);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .join-closed {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .join-form {
+    transition: none;
+  }
+}
+
 .join-meter span {
   display: block;
   width: calc((var(--step) + 1) / 5 * 100%);

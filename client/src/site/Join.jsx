@@ -40,6 +40,17 @@ const loadDraft = () => {
   }
 }
 
+const INTL = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA-u-nu-latn' }
+
+/** The reopening instant in the schedule's own time zone, with the zone shown so the hour is unambiguous. */
+const formatReopening = (iso, timeZone, locale) => {
+  try {
+    return new Intl.DateTimeFormat(INTL[locale] || INTL.fr, { dateStyle: 'long', timeStyle: 'short', timeZone }).format(new Date(iso)) + ` (${timeZone})`
+  } catch {
+    return new Date(iso).toLocaleString()
+  }
+}
+
 const JOIN_AUDIO = '/media/brotherhood.mp4'
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -231,6 +242,33 @@ export const Join = () => {
   const onClockElapsed = useCallback(() => setClockReload((value) => value + 1), [])
   usePageMeta(`${copy.title} — The Brotherhood`, copy.lead, '/join')
 
+  const windowState = registration.window
+  const checking = registration.status === 'loading'
+  const closed = Boolean(windowState?.configured && !windowState.accepting)
+  const locked = checking || closed
+  const reopensAt = closed && windowState.phase === 'scheduled' && windowState.targetKind === 'open' ? windowState.target : null
+
+  useEffect(() => {
+    const refresh = () => setClockReload((value) => value + 1)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    let timer = 0
+    const target = windowState?.target ? Date.parse(windowState.target) : NaN
+    if (Number.isFinite(target)) {
+      const skew = windowState.serverNow ? Date.now() - Date.parse(windowState.serverNow) : 0
+      const wait = target - (Date.now() - skew) + 1000
+      if (wait > 0 && wait < 2_000_000_000) timer = setTimeout(refresh, wait)
+    }
+    const poll = setInterval(refresh, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      clearTimeout(timer)
+      clearInterval(poll)
+    }
+  }, [windowState])
+
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(values))
   }, [values])
@@ -337,6 +375,7 @@ export const Join = () => {
   }
 
   const send = async () => {
+    if (locked) return
     if (![0, 1, 2].every((index) => validate(index))) {
       setStep(0)
       return
@@ -399,13 +438,7 @@ export const Join = () => {
     <div className="join-stage">
       <div className="join-bg" aria-hidden="true" />
       <JoinSound />
-      {registration.window?.configured && !registration.window.accepting ? (
-        <article className="section page-pad">
-          <div className="container join-shell">
-            <RegistrationClock state={{ ...registration.window, configured: true, showCountdown: registration.window.showCountdown }} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
-          </div>
-        </article>
-      ) : status === 'saved' ? (
+      {status === 'saved' ? (
       <article className="section page-pad">
         <div className="container join-success">
         <p className="kicker">{copy.kicker}</p>
@@ -425,9 +458,22 @@ export const Join = () => {
       <p className="kicker">{copy.kicker}</p>
       <h1 className="page-title">{copy.title}</h1>
       <p className="lead">{copy.lead}</p>
-      {registration.window?.showCountdown ? (
-        <RegistrationClock state={registration.window} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
+      {closed ? (
+        <div className="join-closed">
+          <RegistrationClock state={{ ...windowState, configured: true }} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
+          <p className="join-closed-text" id="join-closed-text">{copy.closedNotice}</p>
+          {reopensAt ? <p className="join-closed-date">{copy.reopens.replace('{{date}}', formatReopening(reopensAt, windowState.timeZone, locale))}</p> : null}
+        </div>
+      ) : windowState?.showCountdown ? (
+        <RegistrationClock state={windowState} copy={pack.recruit.clock} onElapsed={onClockElapsed} />
       ) : null}
+      <fieldset
+        className={`join-form${closed ? ' is-closed' : ''}`}
+        disabled={closed}
+        inert={locked}
+        aria-busy={checking || undefined}
+        aria-describedby={closed ? 'join-closed-text' : undefined}
+      >
       <div className="join-meter" style={{ '--step': step }} aria-hidden="true">
         <span />
       </div>
@@ -579,6 +625,7 @@ export const Join = () => {
           </button>
         )}
       </div>
+      </fieldset>
       </div>
     </article>
       )}
