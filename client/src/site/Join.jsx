@@ -424,7 +424,7 @@ export const Join = () => {
         return
       }
       setStatus('error')
-      setServerError(error.status === 403 ? copy.closed : error.status === 429 ? copy.rate : error.status === 503 ? copy.offline : copy.fail)
+      setServerError(error.status === 403 ? copy.closed : error.status === 429 ? copy.rate : error.status === 503 ? copy.offline : error.status === 0 ? copy.network : copy.fail)
     }
   }
 

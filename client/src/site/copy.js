@@ -337,6 +337,7 @@ export const COPY = {
       fail: 'L’envoi n’a pas abouti. La candidature n’est pas enregistrée.',
       rate: 'Trop d’envois depuis ce réseau. Réessayez dans quelques minutes.',
       offline: 'La base de données ne répond pas. Rien n’a été enregistré.',
+      network: 'La connexion a été interrompue. Vos réponses sont conservées : vérifiez votre réseau puis renvoyez.',
       closed: 'Les inscriptions sont fermées. La candidature n’a pas été enregistrée.',
       closedNotice: 'Les adhésions sont actuellement fermées. Le formulaire ci-dessous est désactivé et se réactivera automatiquement à la réouverture.',
       reopens: 'Ouverture prévue le {{date}}',
@@ -357,7 +358,7 @@ export const COPY = {
       ],
     },
     notFound: { title: 'Cette page n’existe pas.', back: 'Retour à l’accueil' },
-    a11y: { skip: 'Aller au contenu', lang: 'Langue' },
+    a11y: { skip: 'Aller au contenu', lang: 'Langue', loading: 'Chargement…' },
   },
   en: {
     meta: {
@@ -696,6 +697,7 @@ export const COPY = {
       fail: 'The send did not go through. The application was not saved.',
       rate: 'Too many sends from this network. Try again in a few minutes.',
       offline: 'The database is not responding. Nothing was saved.',
+      network: 'The connection dropped. Your answers are kept: check your network, then send again.',
       closed: 'Registration is closed. The application was not saved.',
       closedNotice: 'Membership registration is currently closed. The form below is disabled and will turn back on automatically when registration reopens.',
       reopens: 'Registration opens on {{date}}',
@@ -716,7 +718,7 @@ export const COPY = {
       ],
     },
     notFound: { title: 'This page does not exist.', back: 'Back to the home page' },
-    a11y: { skip: 'Skip to content', lang: 'Language' },
+    a11y: { skip: 'Skip to content', lang: 'Language', loading: 'Loading…' },
   },
   ar: {
     meta: {
@@ -1055,6 +1057,7 @@ export const COPY = {
       fail: 'لم يتم الإرسال. الطلب غير محفوظ.',
       rate: 'إرسالات كثيرة من هذه الشبكة. أعد المحاولة بعد دقائق.',
       offline: 'قاعدة البيانات لا تجيب. لم يُحفظ شيء.',
+      network: 'انقطع الاتصال. إجاباتك محفوظة: تحقق من شبكتك ثم أعد الإرسال.',
       closed: 'التسجيل مغلق. لم يُحفظ الطلب.',
       closedNotice: 'التسجيل في العضوية مغلق حاليًا. النموذج أدناه معطّل وسيُعاد تفعيله تلقائيًا عند إعادة فتح التسجيل.',
       reopens: 'موعد فتح التسجيل: {{date}}',
@@ -1075,7 +1078,7 @@ export const COPY = {
       ],
     },
     notFound: { title: 'هذه الصفحة غير موجودة.', back: 'العودة إلى الرئيسية' },
-    a11y: { skip: 'تخطي إلى المحتوى', lang: 'اللغة' },
+    a11y: { skip: 'تخطي إلى المحتوى', lang: 'اللغة', loading: 'جارٍ التحميل…' },
   },
 }
 

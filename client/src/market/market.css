@@ -986,6 +986,7 @@ html[lang='ar'] .mkt-head h3 {
 @media (max-width: 1023px) {
   .term-chart {
     flex: none;
+    height: min(58vh, 560px);
     height: min(58svh, 560px);
     min-height: 320px;
   }

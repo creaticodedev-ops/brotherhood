@@ -24,18 +24,46 @@ const messageKey = (state) => {
   return 'closed'
 }
 
+const WINDOW_TIMEOUT_MS = 8000
+const RETRY_DELAYS_MS = [4000, 12000, 30000]
+
+/**
+ * The form waits for this answer, so it must never hang: after 8 s it is released (the server still refuses
+ * applications outside the window) and the request keeps retrying quietly, which also wakes a sleeping API.
+ */
 export const useRegistrationWindow = (reloadKey = 0) => {
   const [result, setResult] = useState({ status: 'loading', window: null })
 
   useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/registrations/window', { signal: controller.signal, cache: 'no-store' })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((window) => setResult({ status: 'ready', window }))
-      .catch((error) => {
-        if (error.name !== 'AbortError') setResult({ status: 'ready', window: null })
-      })
-    return () => controller.abort()
+    let stopped = false
+    let controller = null
+    let timeout = 0
+    let retry = 0
+    const attempt = (index) => {
+      controller = new AbortController()
+      timeout = setTimeout(() => controller.abort(), WINDOW_TIMEOUT_MS)
+      fetch('/api/registrations/window', { signal: controller.signal, cache: 'no-store' })
+        .then((response) => {
+          if (!response.ok) throw new Error(String(response.status))
+          return response.json()
+        })
+        .then((window) => {
+          if (!stopped) setResult({ status: 'ready', window })
+        })
+        .catch(() => {
+          if (stopped) return
+          setResult((current) => (current.status === 'loading' ? { status: 'ready', window: null } : current))
+          if (index < RETRY_DELAYS_MS.length) retry = setTimeout(() => attempt(index + 1), RETRY_DELAYS_MS[index])
+        })
+        .finally(() => clearTimeout(timeout))
+    }
+    attempt(0)
+    return () => {
+      stopped = true
+      clearTimeout(timeout)
+      clearTimeout(retry)
+      controller?.abort()
+    }
   }, [reloadKey])
 
   return result

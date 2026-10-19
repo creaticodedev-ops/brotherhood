@@ -46,6 +46,8 @@ export default defineConfig({
 
   build: {
     target: 'es2020',
+    // Named browsers (not just a language level) so esbuild adds -webkit- prefixes for older Safari and Chrome.
+    cssTarget: ['chrome87', 'edge88', 'firefox78', 'safari14', 'ios14'],
     sourcemap: false,
     reportCompressedSize: false,
   },

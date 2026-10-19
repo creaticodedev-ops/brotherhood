@@ -2,6 +2,7 @@
   position: relative;
   display: grid;
   align-items: end;
+  min-height: 100vh;
   min-height: 100svh;
   padding: calc(var(--nav-h) + 48px) 0 72px;
   overflow: hidden;
@@ -237,6 +238,7 @@
   position: relative;
   display: grid;
   align-items: end;
+  min-height: 100vh;
   min-height: 100svh;
   padding: calc(var(--nav-h) + 48px) 0 72px;
   overflow: hidden;

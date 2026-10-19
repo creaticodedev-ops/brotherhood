@@ -74,6 +74,7 @@ html.has-dialog {
 
 .overlay-sheet .overlay-panel {
   height: auto;
+  max-height: calc(100vh - 24px);
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
   border: 1px solid var(--line-strong);
@@ -98,6 +99,7 @@ html.has-dialog {
 
   .overlay-sheet .overlay-panel {
     width: min(1040px, 100%);
+    max-height: calc(100vh - 48px);
     max-height: calc(100dvh - 48px);
     border-bottom: 1px solid var(--line-strong);
     border-radius: 22px;

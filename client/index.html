@@ -31,15 +31,18 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
-    />
+    <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      html { background: #050605; }
+      .boot-shell { display: grid; place-items: center; min-height: 100vh; }
+      .boot-shell::after { width: 26px; height: 26px; border: 2px solid rgba(255, 255, 255, 0.18); border-top-color: #ff2948; border-radius: 50%; content: ''; animation: boot-spin 0.9s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .boot-shell::after { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-shell" aria-hidden="true"></div></div>
     <noscript>The Brotherhood — solidarité, création, impact.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>

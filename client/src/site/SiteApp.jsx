@@ -63,7 +63,7 @@ export const SiteApp = () => {
   if (route.name === 'social') page = <SocialPage />
   if (route.name === 'join') {
     page = (
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="page-loading" role="status" aria-label={pack.a11y.loading} />}>
         <Join />
       </Suspense>
     )

@@ -39,12 +39,28 @@ export const loadCreative = async () => {
   return { frames: creativeFrames(data.items), source: data.source }
 }
 
+const SUBMIT_TIMEOUT_MS = 90_000
+
+/** A dropped or stalled connection ends as status 0 instead of an endless spinner. The draft stays saved. */
 export const submitApplication = async (body) => {
-  const response = await fetch('/api/registrations', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS)
+  let response
+  try {
+    response = await fetch('/api/registrations', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+  } catch {
+    const error = new Error('Network error')
+    error.status = 0
+    error.fields = {}
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     const error = new Error(data.error || 'Request failed')

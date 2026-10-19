@@ -4,7 +4,13 @@ import { countryList, dialCode, examplePhone, matchesCountry, PREFERRED_COUNTRIE
 const PAGE = 8
 
 let flagsRequest = null
-const loadFlags = () => (flagsRequest ||= import('./flags').then((module) => module.FLAGS))
+const loadFlags = () =>
+  (flagsRequest ||= import('./flags')
+    .then((module) => module.FLAGS)
+    .catch((error) => {
+      flagsRequest = null
+      throw error
+    }))
 
 const Flag = ({ code, flags }) =>
   flags?.[code] ? (

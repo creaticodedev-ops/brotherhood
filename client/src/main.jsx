@@ -1,10 +1,18 @@
+import './styles/fonts.css'
 import './styles/global.css'
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { AppBoundary } from './AppBoundary'
 import { I18nProvider } from './i18n/I18nProvider'
+import { reloadOnce } from './recovery'
 import { SiteApp } from './site/SiteApp'
 
 const AdminApp = lazy(() => import('./admin/AdminApp'))
+
+// A tab opened before a deployment asks for code files that no longer exist: reload once to get the new ones.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnce()) event.preventDefault()
+})
 
 const onVercelHost = window.location.hostname.endsWith('.vercel.app')
 if (onVercelHost) {
@@ -17,16 +25,18 @@ const isAdmin = /^\/admin(\/|$)/.test(window.location.pathname)
 
 if (!onVercelHost) createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {isAdmin ? (
-      <I18nProvider titleKey={null}>
-        <Suspense fallback={null}>
-          <AdminApp />
-        </Suspense>
-      </I18nProvider>
-    ) : (
-      <I18nProvider titleKey={null}>
-        <SiteApp />
-      </I18nProvider>
-    )}
+    <AppBoundary>
+      {isAdmin ? (
+        <I18nProvider titleKey={null}>
+          <Suspense fallback={<div className="app-boot" aria-hidden="true" />}>
+            <AdminApp />
+          </Suspense>
+        </I18nProvider>
+      ) : (
+        <I18nProvider titleKey={null}>
+          <SiteApp />
+        </I18nProvider>
+      )}
+    </AppBoundary>
   </StrictMode>,
 )
