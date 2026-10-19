@@ -97,6 +97,8 @@ const fr = {
     open: 'Ouvrir le menu',
     close: 'Fermer le menu',
     language: 'Langue',
+    groupSite: 'Site public',
+    groupAdmin: 'Comptes et sécurité',
   },
   settings: {
     kicker: 'Administration',
@@ -511,6 +513,8 @@ const en = {
     open: 'Open menu',
     close: 'Close menu',
     language: 'Language',
+    groupSite: 'Public site',
+    groupAdmin: 'Accounts & security',
   },
   settings: {
     kicker: 'Administration',
@@ -925,6 +929,8 @@ const ar = {
     open: 'فتح القائمة',
     close: 'إغلاق القائمة',
     language: 'اللغة',
+    groupSite: 'الموقع العام',
+    groupAdmin: 'الحسابات والأمان',
   },
   settings: {
     kicker: 'الإدارة',

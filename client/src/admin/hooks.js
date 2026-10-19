@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { prefersReducedMotion } from '../landing/hooks'
 
 export const STATUS_ORDER = ['new', 'pending', 'review', 'accepted', 'rejected', 'approved', 'active', 'completed']
@@ -35,6 +35,29 @@ export const useCountUp = (value, duration = 900) => {
     return () => cancelAnimationFrame(frame)
   }, [value, duration])
   return shown
+}
+
+/** Callback ref for a horizontal scroller: sets `data-more` to the side(s) that still hide content. */
+export const useScrollHint = () => {
+  const detach = useRef(null)
+  return useCallback((el) => {
+    detach.current?.()
+    detach.current = null
+    if (!el) return
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth
+      const pos = Math.abs(el.scrollLeft)
+      el.dataset.more = max <= 1 ? '' : pos <= 1 ? 'end' : pos >= max - 1 ? 'start' : 'both'
+    }
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    el.addEventListener('scroll', update, { passive: true })
+    update()
+    detach.current = () => {
+      observer.disconnect()
+      el.removeEventListener('scroll', update)
+    }
+  }, [])
 }
 
 /** Escape closes, Tab stays inside, focus returns to the opener on close. */

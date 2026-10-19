@@ -5,7 +5,8 @@ import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
 import { CONTENT_COPY, fill } from './contentCopy'
 import { ChevronIcon, SearchIcon } from './icons'
-import { ErrorState } from './parts'
+import { useOpsCopy } from './opsCopy'
+import { ErrorState, LoadingState } from './parts'
 import { StoryEditor } from './StoryEditor'
 
 const LIBRARY = [...new Set(STORIES.flatMap((story) => [story.cover, ...story.images.map((image) => image.src)]).filter(Boolean))]
@@ -21,16 +22,18 @@ const move = (list, from, to) => {
 
 const bySort = (a, b) => (a.sort || 0) - (b.sort || 0) || a.title.localeCompare(b.title)
 
-export const ContentDesk = () => {
+export const ContentDesk = ({ intent = null }) => {
   const { locale } = useI18n()
   const copy = CONTENT_COPY[locale] || CONTENT_COPY.fr
+  const { common } = useOpsCopy()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [kind, setKind] = useState('mission')
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
   const [category, setCategory] = useState('')
-  const [editing, setEditing] = useState(null)
+  const [editing, setEditing] = useState(() => (intent?.create ? { story: null, kind: 'mission' } : null))
+  const [opened, setOpened] = useState(false)
   const [ordering, setOrdering] = useState(null)
   const [dragging, setDragging] = useState(-1)
   const [notice, setNotice] = useState(null)
@@ -67,8 +70,17 @@ export const ContentDesk = () => {
     })
   }, [all, query, status, category])
 
+  if (data && intent?.id && !opened) {
+    const target = data.items.find((item) => item.id === intent.id)
+    setOpened(true)
+    if (target) {
+      setKind(target.kind)
+      setEditing({ story: target, kind: target.kind })
+    }
+  }
+
   if (error) return <ErrorState error={error} onRetry={load} />
-  if (!data) return <p className="adm-lead">…</p>
+  if (!data) return <LoadingState label={common.loading} rows={4} />
 
   const categories = data.categories || {}
   const limits = data.limits || DEFAULT_LIMITS

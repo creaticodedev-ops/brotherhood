@@ -125,6 +125,61 @@ export const TrashIcon = ({ size = 16 }) => (
   </Icon>
 )
 
+export const MissionIcon = () => (
+  <Icon>
+    <path d="M4 16V2.5" />
+    <path d="M4 3h9l-2 3 2 3H4" />
+  </Icon>
+)
+
+export const WalletIcon = () => (
+  <Icon>
+    <rect x="2.5" y="4.5" width="13" height="10" rx="2" />
+    <path d="M2.5 7.5h13M11.5 11h1.5" />
+  </Icon>
+)
+
+export const TeamIcon = () => (
+  <Icon>
+    <circle cx="7" cy="6.5" r="2.5" />
+    <path d="M2.5 15c.4-2.5 2.2-4 4.5-4s4.1 1.5 4.5 4" />
+    <path d="M12 4.25a2.25 2.25 0 0 1 0 4.5M13.5 11.25c1.15.55 1.85 1.85 2 3.75" />
+  </Icon>
+)
+
+export const JournalIcon = () => (
+  <Icon>
+    <circle cx="9" cy="9" r="6.5" />
+    <path d="M9 5.5V9l2.5 1.5" />
+  </Icon>
+)
+
+export const CalendarIcon = () => (
+  <Icon>
+    <rect x="2.5" y="3.5" width="13" height="12" rx="2" />
+    <path d="M2.5 7.5h13M6 2v3M12 2v3" />
+  </Icon>
+)
+
+export const PlusIcon = ({ size = 16 }) => (
+  <Icon size={size}>
+    <path d="M9 3.5v11M3.5 9h11" />
+  </Icon>
+)
+
+export const RefreshIcon = ({ size = 16 }) => (
+  <Icon size={size}>
+    <path d="M14.5 9a5.5 5.5 0 1 1-1.6-3.9" />
+    <path d="M14.5 3v3.5H11" />
+  </Icon>
+)
+
+export const ArrowIcon = ({ className = 'adm-chevron' }) => (
+  <Icon size={16} className={className}>
+    <path d="M3.5 9h11M10 4.5L14.5 9 10 13.5" />
+  </Icon>
+)
+
 export const MenuIcon = () => (
   <Icon>
     <path d="M3 6h12M3 12h12" />

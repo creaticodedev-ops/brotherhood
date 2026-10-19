@@ -22,6 +22,19 @@ export const Avatar = ({ item, size = 'md' }) => {
   )
 }
 
+export const LoadingState = ({ label, rows = 3 }) => (
+  <div className="adm-loading" role="status" aria-live="polite">
+    <span className="sr-only">{label}</span>
+    <div className="adm-loading-head" aria-hidden="true">
+      <i />
+      <i />
+    </div>
+    {Array.from({ length: rows }, (_, index) => (
+      <i key={index} className="adm-loading-row" aria-hidden="true" style={{ '--i': index }} />
+    ))}
+  </div>
+)
+
 export const ErrorState = ({ error, onRetry }) => {
   const a = useAdminText()
   return (

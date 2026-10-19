@@ -11,8 +11,10 @@ import { MissionsDesk } from './MissionsDesk'
 import { TeamDesk } from './TeamDesk'
 import { formatCount } from './format'
 import { ContentDesk } from './ContentDesk'
-import { ApplicationsIcon, BellIcon, CloseIcon, ContentIcon, ExternalIcon, LogoutIcon, MenuIcon, OverviewIcon, SettingsIcon } from './icons'
+import { ApplicationsIcon, BellIcon, CalendarIcon, CloseIcon, ContentIcon, ExternalIcon, JournalIcon, LogoutIcon, MenuIcon, MissionIcon, OverviewIcon, SettingsIcon, TeamIcon, WalletIcon } from './icons'
 import { NotificationPanel, Toasts } from './NotificationCenter'
+import { useOpsCopy } from './opsCopy'
+import { ErrorState, LoadingState } from './parts'
 import { RegistrationDesk } from './RegistrationDesk'
 import { Settings } from './Settings'
 import { useAdminText } from './strings'
@@ -43,19 +45,19 @@ const readRoute = () => {
 
 const pathFor = ({ view, id }) => `${VIEW_PATHS[view] || VIEW_PATHS.overview}${id ? `?open=${id}` : ''}`
 
-const useStats = (version) => {
+const useStats = (version, days) => {
   const [state, setState] = useState({ data: null, error: null })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
     adminApi
-      .stats(controller.signal)
+      .stats(controller.signal, days)
       .then((data) => setState({ data, error: null }))
       .catch((error) => {
         if (error.name !== 'AbortError') setState((prev) => ({ ...prev, error }))
       })
     return () => controller.abort()
-  }, [version, attempt])
+  }, [version, attempt, days])
   return { ...state, retry: useCallback(() => setAttempt((n) => n + 1), []) }
 }
 
@@ -75,8 +77,10 @@ const AccessDenied = ({ onHome }) => {
 
 export const Dashboard = ({ onLogout }) => {
   const a = useAdminText()
+  const ops = useOpsCopy()
   const { locale } = useI18n()
   const [route, setRoute] = useState(readRoute)
+  const [days, setDays] = useState(30)
   const [version, setVersion] = useState(0)
   const [fresh, setFresh] = useState(() => new Set())
   const [toasts, setToasts] = useState([])
@@ -84,7 +88,7 @@ export const Dashboard = ({ onLogout }) => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [actor, setActor] = useState(null)
   const center = useNotifications()
-  const stats = useStats(version)
+  const stats = useStats(version, days)
   const { add: addNotification, sync: syncNotifications, reload: reloadNotifications, setRead, unread } = center
 
   const navigate = useCallback((next, replace = false) => {
@@ -94,9 +98,17 @@ export const Dashboard = ({ onLogout }) => {
     setMenuOpen(false)
   }, [])
 
+  const [actorError, setActorError] = useState(null)
+  const [actorAttempt, setActorAttempt] = useState(0)
   useEffect(() => {
-    adminApi.session().then(setActor).catch(() => {})
-  }, [])
+    adminApi
+      .session()
+      .then((data) => {
+        setActor(data)
+        setActorError(null)
+      })
+      .catch(setActorError)
+  }, [actorAttempt])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -145,6 +157,8 @@ export const Dashboard = ({ onLogout }) => {
       reloadNotifications()
     }
   })
+
+  const goTo = useCallback((view, intent) => navigate({ view, intent: intent ? { ...intent, key: Date.now() } : null }), [navigate])
 
   const openApplication = useCallback(
     (id) => {
@@ -220,11 +234,8 @@ export const Dashboard = ({ onLogout }) => {
         <nav className="adm-nav">
           {navLink('overview', OverviewIcon)}
           {show.applications ? navLink('applications', ApplicationsIcon, pendingCount ? <span className="adm-count">{formatCount(pendingCount, locale)}</span> : null) : null}
-          {show.missions ? navLink('missions', ContentIcon) : null}
-          {show.caisse ? navLink('caisse', SettingsIcon) : null}
-          {show.team ? navLink('team', ApplicationsIcon) : null}
-          {show.audit ? navLink('audit', BellIcon) : null}
-          {show.content ? navLink('content', ContentIcon) : null}
+          {show.missions ? navLink('missions', MissionIcon) : null}
+          {show.caisse ? navLink('caisse', WalletIcon) : null}
           {show.notifications ? (
             <button
               type="button"
@@ -239,11 +250,27 @@ export const Dashboard = ({ onLogout }) => {
               {unread ? <span className="adm-count is-alert">{formatCount(unread, locale)}</span> : null}
             </button>
           ) : null}
-          {show.registration ? navLink('registration', SettingsIcon) : null}
+          {show.content || show.registration ? <p className="adm-nav-group">{a('nav.groupSite')}</p> : null}
+          {show.content ? navLink('content', ContentIcon) : null}
+          {show.registration ? navLink('registration', CalendarIcon) : null}
+          {show.team || show.audit || show.settings ? <p className="adm-nav-group">{a('nav.groupAdmin')}</p> : null}
+          {show.team ? navLink('team', TeamIcon) : null}
+          {show.audit ? navLink('audit', JournalIcon) : null}
           {show.settings ? navLink('settings', SettingsIcon) : null}
         </nav>
 
         <div className="adm-side-foot">
+          {actor ? (
+            <p className="adm-side-account">
+              <span className="adm-side-avatar" aria-hidden="true">
+                {(actor.name || '·').trim().slice(0, 1).toUpperCase()}
+              </span>
+              <span>
+                <strong dir="auto">{actor.name}</strong>
+                <small>{a(`team.roles.${actor.superAdmin ? 'superadmin' : actor.role}`)}</small>
+              </span>
+            </p>
+          ) : null}
           <div className="adm-side-lang">
             <span>{a('nav.language')}</span>
             <LangSwitch />
@@ -311,8 +338,8 @@ export const Dashboard = ({ onLogout }) => {
         </header>
 
         <main className="adm-content" id="main">
-          {route.view !== 'overview' && !actor ? (
-            <p className="adm-lead" aria-busy="true">…</p>
+          {!actor ? (
+            actorError ? <ErrorState error={actorError} onRetry={() => setActorAttempt((n) => n + 1)} /> : <LoadingState label={ops.common.loading} rows={4} />
           ) : route.view !== 'overview' && !show[route.view] ? (
             <AccessDenied onHome={() => navigate({ view: 'overview' })} />
           ) : route.view === 'settings' ? (
@@ -320,19 +347,31 @@ export const Dashboard = ({ onLogout }) => {
           ) : route.view === 'registration' ? (
             <RegistrationDesk />
           ) : route.view === 'content' ? (
-            <ContentDesk />
+            <ContentDesk key={route.intent?.key} intent={route.intent} />
           ) : route.view === 'applications' ? (
             <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} canDelete={permit('recruitment.delete')} />
           ) : route.view === 'missions' ? (
-            <MissionsDesk />
+            <MissionsDesk key={route.intent?.key} intent={route.intent} canManage={permit('missions.manage')} canFinance={show.caisse} onNavigate={goTo} />
           ) : route.view === 'caisse' ? (
-            <CaisseDesk />
+            <CaisseDesk key={route.intent?.key} intent={route.intent} />
           ) : route.view === 'team' ? (
             <TeamDesk />
           ) : route.view === 'audit' ? (
             <AuditDesk />
           ) : (
-            <CommandHome stats={stats.data} error={stats.error} onRetry={stats.retry} onOpen={openApplication} onNavigate={(view) => navigate({ view })} />
+            <CommandHome
+              actor={actor}
+              permit={permit}
+              show={show}
+              stats={stats.data}
+              error={stats.error}
+              onRetry={stats.retry}
+              days={days}
+              onDays={setDays}
+              version={version}
+              onOpen={openApplication}
+              onNavigate={goTo}
+            />
           )}
         </main>
       </div>

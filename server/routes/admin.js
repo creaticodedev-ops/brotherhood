@@ -41,6 +41,8 @@ export const adminRouter = Router()
 const HEARTBEAT_MS = 25_000
 const PAGE_MAX = 100
 const DAILY_DAYS = 30
+const STAT_RANGES = [7, 30, 90]
+const DECIDED = ['accepted', 'approved', 'rejected']
 const SORTS = { createdAt: 'createdAt', amount: 'amount', name: 'lastName', city: 'city', status: 'status' }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -287,7 +289,10 @@ adminRouter.put('/registration-window', windowAdminOnly, async (req, res, next) 
   try {
     const { errors, data } = readSettingsInput(req.body || {})
     if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid settings', fields: errors })
-    res.json(presentWindow(await saveRegistrationWindow(data)))
+    const saved = await saveRegistrationWindow(data)
+    const state = resolveRegistration(saved)
+    await recordAudit(req.actor, 'registration.update', 'registration', 'membership', `${state.phase} · ${state.override}`)
+    res.json(presentWindow(saved))
   } catch (error) {
     next(error)
   }
@@ -473,8 +478,12 @@ adminRouter.use('/stories', storiesAdminRouter)
 adminRouter.get('/stats', async (req, res, next) => {
   try {
     const tz = timeZone(req.query.tz)
-    const since = new Date(Date.now() - (DAILY_DAYS + 1) * 86_400_000)
-    const [byStatus, byOffer, byDuration, daily, latest, publishedStories, publishedMissions] = await Promise.all([
+    const days = STAT_RANGES.includes(Number(req.query.days)) ? Number(req.query.days) : DAILY_DAYS
+    const now = Date.now()
+    const since = new Date(now - (days + 1) * 86_400_000)
+    const periodStart = new Date(now - days * 86_400_000)
+    const previousStart = new Date(now - 2 * days * 86_400_000)
+    const [byStatus, byOffer, byDuration, daily, latest, publishedStories, publishedMissions, received, previous, decisions, waiting] = await Promise.all([
       Registration.aggregate([{ $group: { _id: '$status', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
       Registration.aggregate([{ $group: { _id: '$offer', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
       Registration.aggregate([{ $group: { _id: '$duration', count: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
@@ -492,6 +501,18 @@ adminRouter.get('/stats', async (req, res, next) => {
       Registration.find().sort({ createdAt: -1 }).limit(6).lean(),
       Story.countDocuments({ published: true }),
       Story.countDocuments({ published: true, kind: 'mission' }),
+      Registration.countDocuments({ createdAt: { $gte: periodStart } }),
+      Registration.countDocuments({ createdAt: { $gte: previousStart, $lt: periodStart } }),
+      Registration.aggregate([
+        { $match: { 'history.at': { $gte: periodStart } } },
+        { $unwind: '$history' },
+        { $match: { 'history.at': { $gte: periodStart }, 'history.status': { $in: DECIDED } } },
+        { $group: { _id: '$_id', statuses: { $addToSet: '$history.status' } } },
+      ]),
+      Registration.findOne({ status: { $in: ['new', 'pending'] } })
+        .sort({ createdAt: 1 })
+        .select('createdAt')
+        .lean(),
     ])
     const group = (rows, keys) =>
       Object.fromEntries(
@@ -508,7 +529,16 @@ adminRouter.get('/stats', async (req, res, next) => {
       offers: group(byOffer, OFFER_IDS),
       durations: group(byDuration, DURATIONS),
       daily: daily.map(({ _id, count, amount }) => ({ day: _id, count, amount })),
-      days: DAILY_DAYS,
+      days,
+      period: {
+        received,
+        previous,
+        decided: {
+          accepted: decisions.filter((row) => row.statuses.some((status) => status !== 'rejected')).length,
+          rejected: decisions.filter((row) => row.statuses.includes('rejected')).length,
+        },
+        oldestWaiting: waiting?.createdAt || null,
+      },
       timeZone: tz,
       latest: canSeeMembers(req.actor) ? latest.map(toApplication) : [],
       archive: { published: publishedStories, missions: publishedMissions },

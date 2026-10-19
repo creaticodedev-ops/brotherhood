@@ -1,6 +1,9 @@
-/** Pure balance math. Transfers never move the central cash total. Reversed rows are excluded. */
+/**
+ * Pure balance math. Transfers never move the central cash total.
+ * A reversed row and the reversal that cancels it are both left out, so together they weigh nothing.
+ */
 
-export const countsInCaisse = (entry) => entry && entry.status !== 'reversed' && entry.kind !== 'transfer'
+export const countsInCaisse = (entry) => Boolean(entry) && entry.status !== 'reversed' && entry.kind !== 'transfer' && entry.kind !== 'reversal'
 
 export const summarize = (opening, entries) => {
   let income = 0
@@ -8,8 +11,8 @@ export const summarize = (opening, entries) => {
   for (const entry of entries) {
     if (!countsInCaisse(entry)) continue
     const amount = Number(entry.amount) || 0
-    if (entry.kind === 'income' || (entry.kind === 'reversal' && entry.direction === 'in')) income += amount
-    if (entry.kind === 'expense' || (entry.kind === 'reversal' && entry.direction === 'out')) expense += amount
+    if (entry.kind === 'income') income += amount
+    if (entry.kind === 'expense') expense += amount
   }
   const open = Number(opening) || 0
   return {

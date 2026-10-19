@@ -37,7 +37,7 @@ const niceScale = (max) => {
   return { step, steps, top: step * steps }
 }
 
-export const DailyChart = ({ daily, days, locale }) => {
+export const DailyChart = ({ daily, days, locale, periodLabel, emptyLabel }) => {
   const a = useAdminText()
   const wrapRef = useRef(null)
   const width = useWidth(wrapRef)
@@ -52,6 +52,7 @@ export const DailyChart = ({ daily, days, locale }) => {
   const barW = Math.max(3, Math.min(18, slot * 0.56))
   const y = (value) => PAD.top + innerH - (value / top) * innerH
   const ticks = Array.from({ length: steps + 1 }, (_, i) => i * step)
+  const labelEvery = series.length <= 7 ? 1 : series.length <= 31 ? (width < 420 ? 10 : 5) : width < 420 ? 30 : 15
 
   const onMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -69,7 +70,7 @@ export const DailyChart = ({ daily, days, locale }) => {
           height={HEIGHT}
           viewBox={`0 0 ${width} ${HEIGHT}`}
           role="img"
-          aria-label={`${a('overview.chart.axis')} — ${a('overview.chart.period')} : ${formatCount(total, locale)}`}
+          aria-label={`${a('overview.chart.axis')} — ${periodLabel || a('overview.chart.period')} : ${formatCount(total, locale)}`}
           onPointerMove={onMove}
           onPointerLeave={() => setHover(null)}
         >
@@ -93,7 +94,7 @@ export const DailyChart = ({ daily, days, locale }) => {
                 ) : (
                   <rect className="adm-bar-empty" x={x} y={y(0) - 1} width={barW} height={1} />
                 )}
-                {index % 5 === (series.length - 1) % 5 ? (
+                {index % labelEvery === (series.length - 1) % labelEvery ? (
                   <text className="adm-chart-x" x={PAD.left + index * slot + slot / 2} y={HEIGHT - 8} textAnchor="middle">
                     {formatDayLabel(item.date, locale)}
                   </text>
@@ -115,7 +116,7 @@ export const DailyChart = ({ daily, days, locale }) => {
           <span>{a('overview.chart.tooltip', { n: formatCount(active.count, locale), amount: formatMoney(active.amount, locale) })}</span>
         </div>
       ) : null}
-      {total ? null : <p className="adm-chart-empty">{a('overview.chart.empty')}</p>}
+      {total ? null : <p className="adm-chart-empty">{emptyLabel || a('overview.chart.empty')}</p>}
     </div>
   )
 }
@@ -125,7 +126,7 @@ export const StatusBreakdown = ({ stats, locale }) => {
   const total = stats.total || 0
   return (
     <div className="adm-breakdown">
-      <div className="adm-stack" aria-hidden="true">
+      <div className="adm-statusbar" aria-hidden="true">
         {total ? (
           STATUS_ORDER.map((status) =>
             stats.statuses[status]?.count ? (

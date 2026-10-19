@@ -20,6 +20,24 @@ export const formatMoney = (value, locale, currency = 'USD', compact = false) =>
   return `\u2068${text.replace(/[\u200e\u200f\u061c]/g, '')}\u2069`
 }
 
+/**
+ * Reads an amount typed the way people write it: "1 500,50", "1.500,50", "1,500.50", "١٥٠٠٫٥", "300 MAD".
+ * With both separators the last one is the decimal mark; a lone comma is decimal. Empty or invalid gives NaN.
+ */
+export const parseAmount = (value) => {
+  let text = String(value ?? '')
+    .replace(/[\u0660-\u0669]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/\u066b/g, ',')
+    .replace(/[\s\u00a0\u202f'’\u066c]/g, '')
+    .replace(/(mad|dhs?|د\.?م\.?)$/i, '')
+  const comma = text.lastIndexOf(',')
+  const dot = text.lastIndexOf('.')
+  if (comma > -1 && dot > -1) text = comma > dot ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '')
+  else if (comma > -1) text = text.replace(',', '.')
+  else if (text.split('.').length > 2) text = text.replace(/\./g, '')
+  return /^\d+(\.\d+)?$/.test(text) ? Number(text) : NaN
+}
+
 export const formatCount = (value, locale) =>
   memo(`c|${locale}`, () => new Intl.NumberFormat(numberLocale(locale))).format(Number.isFinite(value) ? value : 0)
 
@@ -34,6 +52,8 @@ export const formatDateTime = (value, locale) =>
 
 export const formatDate = (value, locale) =>
   memo(`d|${locale}`, () => new Intl.DateTimeFormat(numberLocale(locale), { day: '2-digit', month: 'short', year: 'numeric' })).format(new Date(value))
+
+export const formatMonth = (value, locale) => memo(`mo|${locale}`, () => new Intl.DateTimeFormat(numberLocale(locale), { month: 'short' })).format(new Date(value))
 
 export const formatClock = (value, locale) =>
   memo(`t|${locale}`, () => new Intl.DateTimeFormat(numberLocale(locale), { hour: '2-digit', minute: '2-digit', hour12: false })).format(new Date(value))
@@ -50,6 +70,18 @@ export const relativeTime = (value, now, locale, justNow) => {
   if (hours < 24) return rtf.format(-hours, 'hour')
   const days = Math.floor(hours / 24)
   return days < 30 ? rtf.format(-days, 'day') : formatDate(value, locale)
+}
+
+/** Calendar distance in days, past or future ("in 3 days", "yesterday", "today"). */
+export const relativeDay = (value, now, locale) => {
+  const start = (time) => {
+    const date = new Date(time)
+    date.setHours(0, 0, 0, 0)
+    return date.getTime()
+  }
+  const days = Math.round((start(value) - start(now)) / 86_400_000)
+  if (Math.abs(days) > 60) return formatDate(value, locale)
+  return memo(`rd|${locale}`, () => new Intl.RelativeTimeFormat(numberLocale(locale), { numeric: 'auto' })).format(days, 'day')
 }
 
 /** Local calendar key (YYYY-MM-DD) — matches the server's per-time-zone grouping. */

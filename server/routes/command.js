@@ -1,31 +1,48 @@
 import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import mongoose from 'mongoose'
+import { dbState } from '../configs/db.js'
 import { AuditEvent, recordAudit, toAudit } from '../models/AuditEvent.js'
 import { FinanceBook, loadBook } from '../models/FinanceBook.js'
 import { LEDGER_KINDS, LedgerEntry, toEntry } from '../models/LedgerEntry.js'
 import { MISSION_STATUSES, OpsMission, toMission } from '../models/OpsMission.js'
-import { Registration, toApplication } from '../models/Registration.js'
+import { Registration } from '../models/Registration.js'
 import { ADMIN_ONLY_PERMISSIONS, ALL_PERMISSIONS, PERMISSION_GROUPS, STAFF_ROLES, StaffAccount, grantableFor, toStaff } from '../models/StaffAccount.js'
+import { Story } from '../models/Story.js'
 import { can, canSeeMembers, currentActor, superAdminOnly } from '../services/adminAuth.js'
 import { missionFigures, summarize } from '../services/ledger.js'
 import { hashPassword, passwordProblem, verifyPassword } from '../services/password.js'
+import { loadRegistrationWindow, resolveRegistration } from '../services/registrationWindow.js'
 
 export const commandRouter = Router()
 
+export const AUDIT_AREAS = {
+  applications: /^(application|whatsapp)\./,
+  missions: /^mission\./,
+  finance: /^finance\./,
+  team: /^staff\./,
+  content: /^story\./,
+  registration: /^registration\./,
+}
+const AUDIT_PAGE = 50
+
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const money = (value) => {
   const n = Number(value)
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN
 }
-const day = (value) => {
+/** A date sent as text ("2026-11-02" or ISO). Anything else, including null, means "no date". */
+export const day = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return null
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
 const gate = (permission) => async (req, res, next) => {
   try {
+    if (dbState() !== 'connected') return res.status(503).json({ error: 'Database unavailable' })
     const actor = await currentActor(req)
     if (!actor) return res.status(401).json({ error: 'Unauthorized' })
     if (permission && !can(actor, permission)) return res.status(403).json({ error: 'Forbidden' })
@@ -40,35 +57,77 @@ commandRouter.use(gate())
 
 const missionWithFigures = async (doc, entries) => toMission(doc, missionFigures(doc, entries))
 
+/** Without `missions.manage`, a person only sees the missions they are named on. */
+export const missionsFor = (actor, docs) => {
+  if (can(actor, 'missions.manage')) return docs
+  const name = String(actor?.name || '').trim().toLowerCase()
+  if (!name) return []
+  return docs.filter((doc) => (doc.assignees || []).some((person) => person.trim().toLowerCase() === name))
+}
+
+const financeReader = (actor) => can(actor, 'finance.record') || can(actor, 'finance.approve')
+/** Spending per mission comes from the ledger: treasurers and mission managers only. */
+const figuresReader = (actor) => financeReader(actor) || can(actor, 'missions.manage')
+
+/** Overview of the modules the signed-in person may open. A section is `null` when they may not. */
 commandRouter.get('/summary', async (req, res, next) => {
   try {
-    const from = day(req.query.from)
-    const to = day(req.query.to)
-    const dateFilter = {}
-    if (from) dateFilter.$gte = from
-    if (to) dateFilter.$lte = to
-    const entryQuery = Object.keys(dateFilter).length ? { date: dateFilter } : {}
-    const [book, entries, missions, members, recentAudit] = await Promise.all([
-      loadBook(),
-      LedgerEntry.find(entryQuery).lean(),
+    const actor = req.actor
+    const finance = financeReader(actor)
+    const figures = figuresReader(actor)
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const [book, entries, allMissions, members, recentAudit, stories, windowDoc] = await Promise.all([
+      finance ? loadBook() : null,
+      figures ? LedgerEntry.find().lean() : [],
       OpsMission.find().sort({ plannedAt: 1, createdAt: -1 }).lean(),
       Registration.countDocuments({ kind: 'membership', status: { $in: ['approved', 'accepted', 'active'] } }),
-      AuditEvent.find().sort({ createdAt: -1 }).limit(8).lean(),
+      can(actor, 'audit.read') ? AuditEvent.find().sort({ createdAt: -1 }).limit(8).lean() : null,
+      can(actor, 'content.manage') ? Story.find().select('kind published featured images cover updatedAt').lean() : null,
+      loadRegistrationWindow(),
     ])
-    const financeAllowed = can(req.actor, 'finance.record') || can(req.actor, 'finance.approve')
-    const finance = financeAllowed ? summarize(book.opening, entries) : null
-    const byStatus = Object.fromEntries(MISSION_STATUSES.map((status) => [status, missions.filter((item) => item.status === status).length]))
-    const missionRows = missions.map((mission) => toMission(mission, financeAllowed ? missionFigures(mission, entries) : null))
-    const deadlines = missionRows
-      .filter((mission) => mission.plannedAt && mission.status !== 'archived' && mission.status !== 'completed')
+    const missions = missionsFor(actor, allMissions)
+    const rows = missions.map((doc) => toMission(doc, figures ? missionFigures(doc, entries) : null))
+    const open = rows.filter((mission) => mission.status === 'upcoming' || mission.status === 'ongoing')
+    const deadlines = open
+      .filter((mission) => mission.plannedAt)
+      .sort((a, b) => new Date(a.plannedAt) - new Date(b.plannedAt))
       .slice(0, 6)
+      .map(({ id, title, status, plannedAt, location }) => ({ id, title, status, plannedAt, location, overdue: status === 'upcoming' && new Date(plannedAt) < now }))
+    const month = entries.filter((entry) => new Date(entry.date) >= monthStart)
+    const registration = resolveRegistration(windowDoc, now)
     res.json({
-      finance: finance ? { ...finance, currency: book.currency || 'MAD', period: Boolean(from || to) } : null,
-      missions: { total: missions.length, ...byStatus, items: missionRows.slice(0, 8) },
-      members,
+      generatedAt: now.toISOString(),
+      missions: {
+        scope: can(actor, 'missions.manage') ? 'all' : 'assigned',
+        total: rows.length,
+        ...Object.fromEntries(MISSION_STATUSES.map((status) => [status, rows.filter((mission) => mission.status === status).length])),
+        unscheduled: open.filter((mission) => !mission.plannedAt).length,
+        overrun: rows.filter((mission) => mission.figures?.overrun && mission.status !== 'archived').map(({ id, title }) => ({ id, title })),
+      },
       deadlines,
-      activity: can(req.actor, 'audit.read') ? recentAudit.map(toAudit) : [],
-      pendingExpenses: financeAllowed ? entries.filter((entry) => entry.kind === 'expense' && entry.status === 'posted' && !entry.approvedAt).length : 0,
+      members,
+      finance: finance
+        ? {
+            ...summarize(book.opening, entries),
+            month: summarize(0, month),
+            currency: book.currency || 'MAD',
+            entries: entries.length,
+            unapproved: can(actor, 'finance.approve') ? entries.filter((entry) => entry.kind === 'expense' && entry.status === 'posted' && !entry.approvedAt).length : null,
+          }
+        : null,
+      content: stories
+        ? {
+            published: stories.filter((story) => story.published).length,
+            drafts: stories.filter((story) => !story.published).length,
+            featured: stories.filter((story) => story.published && story.featured).length,
+            withoutImages: stories.filter((story) => !story.cover && !(story.images || []).length).length,
+            missions: stories.filter((story) => story.kind === 'mission').length,
+            activities: stories.filter((story) => story.kind === 'activity').length,
+          }
+        : null,
+      registration: { phase: registration.phase, override: registration.override, opensAt: registration.opensAt, closesAt: registration.closesAt },
+      activity: recentAudit ? recentAudit.map(toAudit) : null,
     })
   } catch (error) {
     next(error)
@@ -78,23 +137,32 @@ commandRouter.get('/summary', async (req, res, next) => {
 commandRouter.get('/search', async (req, res, next) => {
   try {
     const q = text(req.query.q, 80)
-    if (q.length < 2) return res.json({ applications: [], missions: [] })
-    const pattern = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-    const [applications, missions] = await Promise.all([
+    if (q.length < 2) return res.json({ applications: [], missions: [], stories: [] })
+    const pattern = new RegExp(escapeRegex(q), 'i')
+    const [applications, missions, stories] = await Promise.all([
       canSeeMembers(req.actor)
         ? Registration.find({ $or: [{ firstName: pattern }, { lastName: pattern }, { city: pattern }, { email: pattern }] })
             .sort({ createdAt: -1 })
-            .limit(8)
+            .limit(6)
             .lean()
         : [],
       OpsMission.find({ $or: [{ title: pattern }, { location: pattern }, { category: pattern }] })
         .sort({ updatedAt: -1 })
-        .limit(8)
+        .limit(40)
         .lean(),
+      can(req.actor, 'content.manage')
+        ? Story.find({ $or: [{ title: pattern }, { slug: pattern }, { location: pattern }] })
+            .sort({ updatedAt: -1 })
+            .limit(6)
+            .lean()
+        : [],
     ])
     res.json({
       applications: applications.map((doc) => ({ id: String(doc._id), name: `${doc.firstName} ${doc.lastName}`, city: doc.city, status: doc.status })),
-      missions: missions.map((doc) => ({ id: String(doc._id), title: doc.title, status: doc.status })),
+      missions: missionsFor(req.actor, missions)
+        .slice(0, 6)
+        .map((doc) => ({ id: String(doc._id), title: doc.title, status: doc.status, location: doc.location || '' })),
+      stories: stories.map((doc) => ({ id: String(doc._id), title: doc.title, kind: doc.kind, published: doc.published })),
     })
   } catch (error) {
     next(error)
@@ -105,13 +173,14 @@ commandRouter.get('/missions', async (req, res, next) => {
   try {
     const status = text(req.query.status, 20)
     const filter = MISSION_STATUSES.includes(status) ? { status } : {}
-    const [docs, entries] = await Promise.all([OpsMission.find(filter).sort({ plannedAt: 1, createdAt: -1 }).lean(), LedgerEntry.find().lean()])
-    const items = docs.map((doc) => toMission(doc, missionFigures(doc, entries)))
-    if (!can(req.actor, 'missions.manage')) {
-      const name = req.actor.name.toLowerCase()
-      return res.json({ items: items.filter((item) => item.assignees.some((person) => person.toLowerCase() === name)) })
-    }
-    res.json({ items })
+    const finance = financeReader(req.actor)
+    const figures = figuresReader(req.actor)
+    const [docs, entries] = await Promise.all([OpsMission.find(filter).sort({ plannedAt: 1, createdAt: -1 }).lean(), figures ? LedgerEntry.find().lean() : []])
+    res.json({
+      items: missionsFor(req.actor, docs).map((doc) => toMission(doc, figures ? missionFigures(doc, entries) : null)),
+      scope: can(req.actor, 'missions.manage') ? 'all' : 'assigned',
+      finance,
+    })
   } catch (error) {
     next(error)
   }
@@ -181,9 +250,16 @@ commandRouter.get('/ledger', async (req, res, next) => {
     const from = day(req.query.from)
     const to = day(req.query.to)
     if (from || to) filter.date = { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) }
-    const [book, docs] = await Promise.all([loadBook(), LedgerEntry.find(filter).sort({ date: -1, createdAt: -1 }).limit(400).lean()])
-    const all = await LedgerEntry.find().lean()
-    res.json({ book: { opening: book.opening, currency: book.currency || 'MAD' }, summary: summarize(book.opening, all), items: docs.map(toEntry) })
+    const [book, docs, all] = await Promise.all([loadBook(), LedgerEntry.find(filter).sort({ date: -1, createdAt: -1 }).limit(400).lean(), LedgerEntry.find().lean()])
+    const inRange = (entry) => (!from || entry.date >= from) && (!to || entry.date <= to)
+    res.json({
+      book: { opening: book.opening, currency: book.currency || 'MAD', locked: all.length > 0 },
+      summary: summarize(book.opening, all),
+      period: from || to ? summarize(0, all.filter(inRange)) : null,
+      items: docs.map(toEntry),
+      truncated: docs.length === 400,
+      can: { record: can(req.actor, 'finance.record'), approve: can(req.actor, 'finance.approve') },
+    })
   } catch (error) {
     next(error)
   }
@@ -223,7 +299,7 @@ commandRouter.post('/ledger', async (req, res, next) => {
       category: text(req.body?.category, 80),
       mission,
       method: text(req.body?.method, 40),
-      receipt: text(req.body?.receipt, 500),
+      receipt: /^https?:\/\/\S+$/i.test(text(req.body?.receipt, 500)) ? text(req.body.receipt, 500) : '',
       actor: req.actor.name,
       actorId: req.actor.id,
     })
@@ -301,13 +377,27 @@ commandRouter.get('/ledger.csv', async (req, res, next) => {
   }
 })
 
+/** Newest first, `AUDIT_PAGE` at a time. `before` is the id of the last row already shown. */
 commandRouter.get('/audit', async (req, res, next) => {
   try {
     if (!can(req.actor, 'audit.read')) return res.status(403).json({ error: 'Forbidden' })
+    const clauses = []
     const q = text(req.query.q, 80)
-    const filter = q ? { $or: [{ action: new RegExp(q, 'i') }, { actor: new RegExp(q, 'i') }, { detail: new RegExp(q, 'i') }] } : {}
-    const docs = await AuditEvent.find(filter).sort({ createdAt: -1 }).limit(200).lean()
-    res.json({ items: docs.map(toAudit) })
+    if (q) {
+      const pattern = new RegExp(escapeRegex(q), 'i')
+      clauses.push({ $or: [{ action: pattern }, { actor: pattern }, { detail: pattern }] })
+    }
+    const area = text(req.query.area, 20)
+    if (AUDIT_AREAS[area]) clauses.push({ action: AUDIT_AREAS[area] })
+    const from = day(req.query.from)
+    const to = day(req.query.to)
+    if (from || to) clauses.push({ createdAt: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } })
+    if (mongoose.isValidObjectId(req.query.before)) clauses.push({ _id: { $lt: new mongoose.Types.ObjectId(String(req.query.before)) } })
+    const docs = await AuditEvent.find(clauses.length ? { $and: clauses } : {})
+      .sort({ _id: -1 })
+      .limit(AUDIT_PAGE + 1)
+      .lean()
+    res.json({ items: docs.slice(0, AUDIT_PAGE).map(toAudit), more: docs.length > AUDIT_PAGE })
   } catch (error) {
     next(error)
   }
