@@ -433,9 +433,9 @@ export const CommandHome = ({ actor, permit, show, stats, error, onRetry, days, 
               {stats.latest?.length ? (
                 <ul className="adm-recent">
                   {stats.latest.map((item) => (
-                    <li key={item.id}>
+                    <li key={item.id} className="adm-recent-item">
+                      <Avatar item={item} viewable={show.applications} />
                       <button type="button" className="adm-recent-row" onClick={() => onOpen(item.id)}>
-                        <Avatar item={item} />
                         <span className="adm-recent-id">
                           <strong dir="auto">{fullName(item)}</strong>
                           <span dir="auto">

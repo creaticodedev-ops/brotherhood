@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { initials } from './format'
+import { fullName, initials } from './format'
+import { EyeIcon } from './icons'
+import { PhotoViewer } from './PhotoViewer'
 import { useAdminText } from './strings'
 
 export const StatusPill = ({ status }) => {
@@ -12,13 +14,47 @@ export const StatusPill = ({ status }) => {
   )
 }
 
-export const Avatar = ({ item, size = 'md' }) => {
+/** With `viewable`, a photo that loads becomes a button opening the full-size viewer; without one, initials stay as the placeholder. */
+export const Avatar = ({ item, size = 'md', viewable = false }) => {
+  const a = useAdminText()
   const [failed, setFailed] = useState(false)
+  const [open, setOpen] = useState(false)
   const photo = Boolean(item.photo) && !failed
-  return (
+  const src = `/api/admin/registrations/${item.id}/photo`
+  const name = fullName(item)
+  const face = (
     <span className={`adm-avatar is-${size}${photo ? ' has-photo' : ''}`} aria-hidden="true">
-      {photo ? <img src={`/api/admin/registrations/${item.id}/photo`} alt="" onError={() => setFailed(true)} /> : initials(item.firstName, item.lastName)}
+      {photo ? <img src={src} alt="" onError={() => setFailed(true)} /> : initials(item.firstName, item.lastName)}
     </span>
+  )
+  if (!viewable) return face
+  if (!photo) {
+    return (
+      <span className={`adm-avatar-slot is-${size}`} role="img" aria-label={a('photo.none')} title={a('photo.none')}>
+        {face}
+      </span>
+    )
+  }
+  return (
+    <>
+      <button
+        type="button"
+        className={`adm-avatar-view is-${size}`}
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen(true)
+        }}
+        aria-label={a('photo.view', { name })}
+        aria-haspopup="dialog"
+        title={a('photo.view', { name })}
+      >
+        {face}
+        <span className="adm-avatar-eye" aria-hidden="true">
+          <EyeIcon size={size === 'xl' ? 16 : 12} />
+        </span>
+      </button>
+      {open ? <PhotoViewer src={src} name={name} onClose={() => setOpen(false)} /> : null}
+    </>
   )
 }
 

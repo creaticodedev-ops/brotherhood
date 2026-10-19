@@ -307,7 +307,7 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
             <section className="bh-profile">
               <div className="bh-profile-cover" aria-hidden="true" />
               <div className="bh-profile-id">
-                <Avatar item={item} size="xl" />
+                <Avatar item={item} size="xl" viewable />
                 <div>
                   <h2 id="adm-drawer-title" dir="auto">
                     {fullName(item)}

@@ -180,6 +180,34 @@ export const ArrowIcon = ({ className = 'adm-chevron' }) => (
   </Icon>
 )
 
+export const EyeIcon = ({ size = 16 }) => (
+  <Icon size={size}>
+    <path d="M1.75 9S4.5 3.75 9 3.75 16.25 9 16.25 9 13.5 14.25 9 14.25 1.75 9 1.75 9z" />
+    <circle cx="9" cy="9" r="2.25" />
+  </Icon>
+)
+
+export const ZoomInIcon = ({ size = 18 }) => (
+  <Icon size={size}>
+    <circle cx="8" cy="8" r="5.25" />
+    <path d="M15.5 15.5l-3.6-3.6M8 5.75v4.5M5.75 8h4.5" />
+  </Icon>
+)
+
+export const ZoomOutIcon = ({ size = 18 }) => (
+  <Icon size={size}>
+    <circle cx="8" cy="8" r="5.25" />
+    <path d="M15.5 15.5l-3.6-3.6M5.75 8h4.5" />
+  </Icon>
+)
+
+export const PortraitIcon = ({ size = 28 }) => (
+  <Icon size={size}>
+    <circle cx="9" cy="6.75" r="3" />
+    <path d="M3.25 15.5c.6-3 2.85-4.75 5.75-4.75s5.15 1.75 5.75 4.75" />
+  </Icon>
+)
+
 export const MenuIcon = () => (
   <Icon>
     <path d="M3 6h12M3 12h12" />

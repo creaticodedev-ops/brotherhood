@@ -376,7 +376,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
               {data.items.map((item) => (
                 <tr key={item.id} className={`${fresh.has(item.id) ? 'is-fresh' : ''}${busy[item.id] ? ' is-busy' : ''}`.trim() || undefined} onClick={() => onOpen(item.id)}>
                   <td className="adm-cell-applicant">
-                    <Avatar item={item} />
+                    <Avatar item={item} viewable />
                     <span>
                       <button
                         type="button"
