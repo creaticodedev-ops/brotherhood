@@ -16,6 +16,15 @@ const MEMBERSHIP = {
     `مرحباً ${name}،\n\nتم قبول طلبك للانضمام إلى The Brotherhood. نكمل معك من هنا.\n\nThe Brotherhood`,
 }
 
+const FINALIZE = {
+  fr: ({ name, link }) =>
+    `Bonjour ${name},\n\nFélicitations, votre demande d’adhésion a été approuvée !\n\nPour finaliser votre adhésion, veuillez accéder à votre espace personnel via le lien suivant :\n\n${link}\n\nVous pourrez y compléter vos informations, consulter et accepter les conditions d’adhésion, puis transmettre votre reçu de paiement de 100 DH.\n\nNous vous remercions et vous souhaitons la bienvenue parmi nous.\n\nTHE BROTHERHOOD`,
+  en: ({ name, link }) =>
+    `Hello ${name},\n\nCongratulations — your membership application has been approved!\n\nTo complete your membership, open your personal space using this link:\n\n${link}\n\nThere you can confirm your details, review and accept the membership terms, and upload your 100 DH payment receipt.\n\nWelcome to THE BROTHERHOOD.`,
+  ar: ({ name, link }) =>
+    `مرحباً ${name}،\n\nتهانينا، تمت الموافقة على طلب عضويتك!\n\nلإتمام عضويتك، افتح مساحتك الشخصية عبر الرابط التالي:\n\n${link}\n\nستتمكن من إكمال معلوماتك، وقراءة شروط العضوية وقبولها، ثم إرسال إيصال دفع 100 درهم.\n\nمرحباً بك في THE BROTHERHOOD.`,
+}
+
 const TEMPLATES = {
   fr: ({ name, offer, amount, duration }) =>
     `Bonjour ${name},\n\nNous avons le plaisir de vous confirmer que votre demande (offre ${offer}, ${amount}, durée : ${duration}) a été approuvée.\n\nPour la suite, vous pouvez nous écrire ici, sur WhatsApp.\n\nThe Brotherhood`,
@@ -29,7 +38,11 @@ export const messageLocale = (item) => (TEMPLATES[item.locale] ? item.locale : '
 
 export const confirmationMessage = (item) => {
   const locale = messageLocale(item)
-  if (item.kind === 'membership') return MEMBERSHIP[locale]({ name: item.firstName.trim() })
+  if (item.kind === 'membership') {
+    const link = item.finalization?.linkUrl
+    if (link) return FINALIZE[locale]({ name: item.firstName.trim(), link })
+    return MEMBERSHIP[locale]({ name: item.firstName.trim() })
+  }
   const text = (key) => getNested(PUBLIC[locale], key) ?? key
   const amount = `${new Intl.NumberFormat(numberLocale(locale), { maximumFractionDigits: 2 }).format(item.amount)} ${item.currency || 'USD'}`
   return TEMPLATES[locale]({
@@ -38,6 +51,11 @@ export const confirmationMessage = (item) => {
     amount,
     duration: text(`register.durations.${item.duration}`),
   })
+}
+
+export const finalizeInviteMessage = (item, link) => {
+  const locale = messageLocale(item)
+  return FINALIZE[locale]({ name: item.firstName.trim(), link })
 }
 
 /** Number stored by the API in international format (+ country code); wa.me expects digits only. */

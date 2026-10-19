@@ -3,6 +3,8 @@ import test from 'node:test'
 import { readPhoto, validateMembership } from '../services/membership.js'
 
 const phone = { phone: '+212612345678', phoneCountry: 'MA' }
+const TINY_JPEG = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEA8QEA8PDw8PDw8PDw8PFREQEBQOFBQYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGf/9k='
+const PHOTO = `data:image/jpeg;base64,${TINY_JPEG}`
 
 const valid = () => ({
   firstName: 'Sara',
@@ -16,6 +18,7 @@ const valid = () => ({
   motivation: 'Je veux documenter les missions et raconter le groupe avec justesse.',
   contribution: 'Photos, légendes et présence sur le terrain.',
   squads: ['communication'],
+  photo: PHOTO,
   challenges: {
     asfi: 'Trente secondes filmées depuis la médina jusqu’à la mer, sans commentaire.',
     fund: 'Un repas partagé dont l’entrée finance le matériel de la sortie.',
@@ -24,22 +27,27 @@ const valid = () => ({
   locale: 'fr',
 })
 
-test('accepts a complete membership application', () => {
-  const { errors, data } = validateMembership(valid(), phone)
+test('accepts a complete membership application with a profile photo', () => {
+  const { errors, data, photo } = validateMembership(valid(), phone)
   assert.deepEqual(errors, {})
   assert.equal(data.kind, 'membership')
   assert.equal(data.offer, 'membership')
   assert.equal(data.phone, '+212612345678')
   assert.equal(data.gender, 'femme')
   assert.deepEqual(data.squads, ['communication'])
+  assert.equal(photo.type, 'image/jpeg')
 })
 
-const TINY_JPEG = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEA8QEA8PDw8PDw8PDw8PFREQEBQOFBQYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGf/9k='
+test('requires a profile photo', () => {
+  const { errors, photo } = validateMembership({ ...valid(), photo: '' }, phone)
+  assert.equal(errors.photo, 'required')
+  assert.equal(photo, null)
+})
 
 test('accepts a real jpeg profile photo and rejects a fake one', () => {
-  const good = readPhoto(`data:image/jpeg;base64,${TINY_JPEG}`)
+  const good = readPhoto(PHOTO)
   assert.equal(good.photo.type, 'image/jpeg')
-  assert.equal(readPhoto('').photo, null)
+  assert.equal(readPhoto('').missing, true)
   assert.equal(readPhoto('data:image/jpeg;base64,aGVsbG8').error, 'invalid')
 })
 

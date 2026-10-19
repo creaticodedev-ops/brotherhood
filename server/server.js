@@ -6,6 +6,7 @@ import { adminRouter } from './routes/admin.js'
 import { marketRouter } from './routes/market.js'
 import { mediaRouter } from './routes/media.js'
 import { newsRouter } from './routes/news.js'
+import { finalizeRouter } from './routes/finalize.js'
 import { registrationsRouter } from './routes/registrations.js'
 import { storiesRouter } from './routes/stories.js'
 import { adminConfigured, loadAdminAccount } from './services/adminAuth.js'
@@ -39,6 +40,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/market', marketRouter)
 app.use('/api/news', newsRouter)
 app.use('/api/registrations', registrationsRouter)
+app.use('/api/finalize', finalizeRouter)
 app.use('/api/stories', storiesRouter)
 app.use('/api/media', mediaRouter)
 app.use('/api/admin', adminRouter)

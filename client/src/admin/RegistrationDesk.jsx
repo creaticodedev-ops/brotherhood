@@ -4,6 +4,7 @@ import { parseZonedInput, resolveRegistration, WINDOW_ZONE, WINDOW_ZONES } from 
 import { RegistrationClock } from '../site/Countdown'
 import { adminApi } from './api'
 import { DateField } from './DatePicker'
+import { MembershipSettingsDesk } from './MembershipSettingsDesk'
 
 const EMPTY = {
   countdownVisible: false,
@@ -370,6 +371,8 @@ export const RegistrationDesk = () => {
           </div>
         </form>
       )}
+
+      <MembershipSettingsDesk />
     </div>
   )
 }

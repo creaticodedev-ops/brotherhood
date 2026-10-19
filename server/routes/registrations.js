@@ -108,6 +108,7 @@ registrationsRouter.post('/', async (req, res, next) => {
     if (!windowState.accepting) return res.status(403).json({ error: 'Registration closed', phase: windowState.phase })
     const { data, errors, photo } = validate(req.body)
     if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid registration', fields: errors })
+    if (data.kind === 'membership' && !photo) return res.status(422).json({ error: 'Invalid registration', fields: { photo: 'required' } })
     const doc = await Registration.create({ ...data, amount: Math.round(data.amount * 100) / 100 })
     if (photo) {
       try {

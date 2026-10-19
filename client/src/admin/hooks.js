@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { prefersReducedMotion } from '../landing/hooks'
 
-export const STATUS_ORDER = ['new', 'pending', 'review', 'accepted', 'rejected', 'approved', 'active', 'completed']
+export const STATUS_ORDER = [
+  'new',
+  'pending',
+  'review',
+  'accepted',
+  'rejected',
+  'approved',
+  'finalizing',
+  'payment_review',
+  'active',
+  'completed',
+]
 
 /** Re-renders every `ms` so relative times stay current. */
 export const useNow = (ms = 30_000) => {

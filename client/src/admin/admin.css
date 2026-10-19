@@ -1350,6 +1350,14 @@ html[lang='ar'] .adm-panel-head h2 {
   background: var(--st-approved);
 }
 
+:is(.adm-statusbar i, .adm-legend-dot, .adm-chip i).is-finalizing {
+  background: color-mix(in srgb, var(--st-approved) 70%, #e8c547);
+}
+
+:is(.adm-statusbar i, .adm-legend-dot, .adm-chip i).is-payment_review {
+  background: #e8c547;
+}
+
 :is(.adm-statusbar i, .adm-legend-dot, .adm-chip i).is-active {
   background: var(--st-active);
 }
@@ -1597,8 +1605,103 @@ html[lang='ar'] .adm-panel-head h2 {
   --tone: var(--st-approved);
 }
 
+.adm-pill.is-finalizing {
+  --tone: color-mix(in srgb, var(--st-approved) 70%, #e8c547);
+}
+
+.adm-pill.is-payment_review {
+  --tone: #e8c547;
+}
+
 .adm-pill.is-active {
   --tone: #2fcf87;
+}
+
+.adm-finalize-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.adm-finalize-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 245, 243, 0.12);
+  color: rgba(244, 245, 243, 0.55);
+  font-size: 0.75rem;
+}
+
+.adm-finalize-chip.is-current {
+  color: #fff;
+  border-color: rgba(200, 16, 46, 0.55);
+  background: rgba(200, 16, 46, 0.18);
+}
+
+.adm-finalize-link {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(244, 245, 243, 0.1);
+}
+
+.adm-finalize-link code {
+  word-break: break-all;
+  font-size: 0.82rem;
+  color: rgba(244, 245, 243, 0.88);
+}
+
+.adm-finalize-receipt,
+.adm-finalize-reject {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.adm-finalize-reject {
+  display: grid;
+}
+
+.adm-finalize-history {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.adm-finalize-history li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  padding-block: 6px;
+  border-top: 1px solid rgba(244, 245, 243, 0.08);
+  font-size: 0.85rem;
+}
+
+.adm-finalize-history time {
+  color: rgba(244, 245, 243, 0.5);
+}
+
+.adm-membership-settings {
+  margin-top: 28px;
+}
+
+.adm-membership-settings textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 245, 243, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
 }
 
 .adm-pill.is-active i {

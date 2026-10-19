@@ -1,9 +1,21 @@
 import mongoose from 'mongoose'
+import { finalizePipeline, toFinalizeAdmin } from '../services/finalize.js'
 
 export const OFFER_IDS = ['essential', 'advanced', 'premium', 'membership']
 export const DURATIONS = ['15d', '1m', 'join']
 export const KINDS = ['legacy', 'membership']
-export const STATUSES = ['new', 'pending', 'review', 'accepted', 'rejected', 'approved', 'active', 'completed']
+export const STATUSES = [
+  'new',
+  'pending',
+  'review',
+  'accepted',
+  'rejected',
+  'approved',
+  'finalizing',
+  'payment_review',
+  'active',
+  'completed',
+]
 
 /** Status changes the admin may apply from a given status. */
 export const TRANSITIONS = {
@@ -12,7 +24,9 @@ export const TRANSITIONS = {
   review: ['pending', 'accepted', 'rejected'],
   accepted: ['rejected', 'pending'],
   rejected: ['pending', 'review'],
-  approved: ['accepted', 'active', 'rejected', 'pending'],
+  approved: ['accepted', 'finalizing', 'active', 'rejected', 'pending'],
+  finalizing: ['payment_review', 'approved', 'rejected', 'pending'],
+  payment_review: ['active', 'finalizing', 'rejected'],
   active: ['completed', 'accepted'],
   completed: ['active'],
 }
@@ -22,6 +36,47 @@ const historySchema = new mongoose.Schema(
     from: { type: String, enum: STATUSES, required: true },
     status: { type: String, enum: STATUSES, required: true },
     at: { type: Date, required: true },
+  },
+  { _id: false },
+)
+
+const finalizeEventSchema = new mongoose.Schema(
+  {
+    type: { type: String, required: true, maxlength: 60 },
+    at: { type: Date, required: true },
+    actor: { type: String, maxlength: 80, default: '' },
+    detail: { type: String, maxlength: 400, default: '' },
+  },
+  { _id: false },
+)
+
+const finalizationSchema = new mongoose.Schema(
+  {
+    tokenHash: { type: String, default: '', maxlength: 64 },
+    tokenHint: { type: String, default: '', maxlength: 8 },
+    expiresAt: { type: Date, default: null },
+    revokedAt: { type: Date, default: null },
+    generatedAt: { type: Date, default: null },
+    generatedBy: { type: String, maxlength: 80, default: '' },
+    linkUrl: { type: String, maxlength: 500, default: '' },
+    sentAt: { type: Date, default: null },
+    instagram: { type: String, trim: true, maxlength: 300, default: '' },
+    whatsapp: { type: String, trim: true, maxlength: 16, default: '' },
+    whatsappCountry: { type: String, trim: true, maxlength: 2, default: '' },
+    infoCompletedAt: { type: Date, default: null },
+    termsVersion: { type: String, maxlength: 40, default: '' },
+    termsAcceptedAt: { type: Date, default: null },
+    receiptUploadedAt: { type: Date, default: null },
+    receiptName: { type: String, maxlength: 180, default: '' },
+    receiptBytes: { type: Number, default: 0 },
+    receiptType: { type: String, maxlength: 80, default: '' },
+    paymentStatus: { type: String, enum: ['none', 'pending', 'confirmed', 'rejected'], default: 'none' },
+    paymentAmount: { type: Number, min: 0, max: 100_000, default: 100 },
+    paymentCurrency: { type: String, default: 'MAD', maxlength: 8 },
+    paymentReviewedAt: { type: Date, default: null },
+    paymentReviewedBy: { type: String, maxlength: 80, default: '' },
+    paymentRejectReason: { type: String, maxlength: 500, default: '' },
+    events: { type: [finalizeEventSchema], default: [] },
   },
   { _id: false },
 )
@@ -59,6 +114,7 @@ const registrationSchema = new mongoose.Schema(
       actor: { type: String, maxlength: 80, default: '' },
       body: { type: String, maxlength: 1500, default: '' },
     },
+    finalization: { type: finalizationSchema, default: () => ({}) },
     locale: { type: String, enum: ['fr', 'en', 'ar'], default: 'fr' },
     status: { type: String, enum: STATUSES, default: 'pending', index: true },
     history: { type: [historySchema], default: [] },
@@ -67,6 +123,7 @@ const registrationSchema = new mongoose.Schema(
 )
 
 registrationSchema.index({ createdAt: -1 })
+registrationSchema.index({ 'finalization.tokenHash': 1 }, { sparse: true })
 
 export const Registration = mongoose.models.Registration || mongoose.model('Registration', registrationSchema)
 
@@ -115,6 +172,8 @@ export const toApplication = (doc) => ({
   reviewedBy: doc.reviewedBy || '',
   reviewedAt: doc.reviewedAt || null,
   whatsapp: doc.whatsapp?.openedAt ? { openedAt: doc.whatsapp.openedAt, actor: doc.whatsapp.actor || '', body: doc.whatsapp.body || '' } : null,
+  finalization: toFinalizeAdmin(doc),
+  pipeline: finalizePipeline(doc),
   locale: doc.locale,
   status: doc.status,
   history: (doc.history || []).map(({ from, status, at }) => ({ from, status, at })),

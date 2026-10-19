@@ -10,8 +10,9 @@ import { Footer, Nav, useCopy } from './ui'
 import '../styles/touch-forms.css'
 
 const Join = lazy(() => import('./Join').then((module) => ({ default: module.Join })))
+const Finalize = lazy(() => import('./Finalize').then((module) => ({ default: module.Finalize })))
 
-const OPEN_DURING_LAUNCH = new Set(['recruit', 'join', 'privacy'])
+const OPEN_DURING_LAUNCH = new Set(['recruit', 'join', 'privacy', 'finalize'])
 
 const match = (pathname) => {
   const path = pathname.replace(/\/+$/, '') || '/'
@@ -24,6 +25,8 @@ const match = (pathname) => {
   if (path === '/join') return { name: 'join', path }
   if (path === '/recruit') return { name: 'recruit', path }
   if (path === '/privacy') return { name: 'privacy', path }
+  const finalize = path.match(/^\/finalize\/([A-Za-z0-9_-]{20,80})$/)
+  if (finalize) return { name: 'finalize', path, token: finalize[1] }
   const mission = path.match(/^\/missions\/([a-z0-9-]+)$/)
   if (mission) return { name: 'story', path, slug: mission[1] }
   const activity = path.match(/^\/activities\/([a-z0-9-]+)$/)
@@ -69,6 +72,13 @@ export const SiteApp = () => {
     )
   }
   if (route.name === 'privacy') page = <Privacy />
+  if (route.name === 'finalize') {
+    return (
+      <Suspense fallback={<div className="page-loading" role="status" aria-label={pack.a11y.loading} />}>
+        <Finalize token={route.token} />
+      </Suspense>
+    )
+  }
   if (route.name === 'recruit' || launchGate) {
     return (
       <div className="bh">

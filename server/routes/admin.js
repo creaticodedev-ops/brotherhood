@@ -8,6 +8,14 @@ import { storiesAdminRouter } from './storiesAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import { recordAudit } from '../models/AuditEvent.js'
 import { readStoredPortrait, rememberLocalPortrait, removePortrait } from '../services/portrait.js'
+import { issueFinalizeLink, pushFinalizeEvent, revokeFinalizeLink } from '../services/finalize.js'
+import {
+  loadMembershipSettings,
+  readMembershipSettingsInput,
+  saveMembershipSettings,
+  toAdminMembershipSettings,
+} from '../services/membershipSettings.js'
+import { readReceipt, removeReceipt } from '../services/receipt.js'
 import { commandRouter, loginStaff } from './command.js'
 import {
   adminConfigured,
@@ -298,6 +306,27 @@ adminRouter.put('/registration-window', windowAdminOnly, async (req, res, next) 
   }
 })
 
+adminRouter.get('/membership-settings', windowAdminOnly, async (_req, res, next) => {
+  try {
+    res.json({ item: toAdminMembershipSettings(await loadMembershipSettings()) })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.put('/membership-settings', windowAdminOnly, async (req, res, next) => {
+  try {
+    const { errors, data } = readMembershipSettingsInput(req.body || {})
+    if (Object.keys(errors).length) return res.status(422).json({ error: 'Invalid settings', fields: errors })
+    if (!Object.keys(data).length) return res.status(422).json({ error: 'Invalid settings' })
+    const saved = await saveMembershipSettings(data)
+    await recordAudit(req.actor, 'membership.settings', 'registration', 'membership', saved.termsVersion)
+    res.json({ item: toAdminMembershipSettings(saved) })
+  } catch (error) {
+    next(error)
+  }
+})
+
 /* ── Applications ── */
 
 const buildFilter = (query, { withStatus = true } = {}) => {
@@ -412,6 +441,13 @@ adminRouter.patch('/registrations/:id', recruitment, async (req, res, next) => {
       if (!STATUSES.includes(status)) return res.status(422).json({ error: 'Invalid status' })
       if (doc.status !== status) {
         if (!TRANSITIONS[doc.status]?.includes(status)) return res.status(409).json({ error: 'Invalid status change' })
+        // Membership activation requires verified payment — not a manual jump from approved.
+        if (status === 'active' && doc.kind === 'membership' && doc.finalization?.paymentStatus !== 'confirmed') {
+          return res.status(409).json({ error: 'payment_required' })
+        }
+        if (status === 'finalizing' && !doc.finalization?.tokenHash) {
+          return res.status(409).json({ error: 'finalize_link_required' })
+        }
         doc.history.push({ from: doc.status, status, at: new Date() })
         doc.status = status
         doc.reviewedBy = req.actor.name
@@ -438,6 +474,7 @@ adminRouter.delete('/registrations/:id', recruitment, async (req, res, next) => 
     if (!doc) return notFound(res)
     await Promise.all([
       removePortrait(doc._id).catch((error) => console.error('[portrait] Not removed:', error.message)),
+      removeReceipt(doc._id).catch((error) => console.error('[receipt] Not removed:', error.message)),
       Notification.deleteMany({ registration: doc._id }).catch((error) => console.error('[admin] Notifications not removed:', error.message)),
     ])
     await recordAudit(req.actor, 'application.deleted', 'application', doc._id, `${doc.firstName} ${doc.lastName}`)
@@ -456,16 +493,150 @@ adminRouter.post('/registrations/:id/whatsapp', recruitment, async (req, res, ne
     if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
     const doc = await Registration.findById(req.params.id)
     if (!doc) return notFound(res)
-    if (!['approved', 'accepted', 'active'].includes(doc.status)) return res.status(409).json({ error: 'Application is not approved' })
+    if (!['approved', 'accepted', 'finalizing', 'payment_review', 'active'].includes(doc.status)) {
+      return res.status(409).json({ error: 'Application is not approved' })
+    }
     const message = typeof req.body?.message === 'string' ? req.body.message.trim().slice(0, 1500) : ''
     if (message.length < 10) return res.status(422).json({ error: 'Invalid message' })
     if (doc.whatsapp?.openedAt && !req.body?.force) {
       return res.status(409).json({ error: 'already', at: doc.whatsapp.openedAt, actor: doc.whatsapp.actor || '' })
     }
     doc.whatsapp = { openedAt: new Date(), actor: req.actor.name, body: message }
+    if (doc.finalization?.linkUrl && message.includes(doc.finalization.linkUrl)) {
+      doc.finalization.sentAt = new Date()
+      pushFinalizeEvent(doc, 'link.sent', req.actor.name)
+    }
     await doc.save()
     await recordAudit(req.actor, 'whatsapp.opened', 'application', doc._id, doc.firstName)
     res.json({ item: toApplication(doc), delivered: false, channel: 'link' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.post('/registrations/:id/finalize-link', recruitment, async (req, res, next) => {
+  try {
+    if (!can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id)
+    if (!doc) return notFound(res)
+    if (doc.kind !== 'membership') return res.status(409).json({ error: 'Not a membership application' })
+    if (!['approved', 'finalizing', 'payment_review', 'active'].includes(doc.status)) {
+      return res.status(409).json({ error: 'Application must be approved first' })
+    }
+    const settings = await loadMembershipSettings()
+    const { url, expiresAt } = issueFinalizeLink(doc, settings, req, req.actor.name)
+    doc.reviewedBy = req.actor.name
+    doc.reviewedAt = new Date()
+    await doc.save()
+    await recordAudit(req.actor, 'finalize.link', 'application', doc._id, doc.firstName)
+    const item = toApplication(doc)
+    publish('application', item)
+    res.json({ item, transitions: TRANSITIONS[doc.status] || [], link: { url, expiresAt } })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.post('/registrations/:id/finalize-link/revoke', recruitment, async (req, res, next) => {
+  try {
+    if (!can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id)
+    if (!doc) return notFound(res)
+    if (!revokeFinalizeLink(doc, req.actor.name)) return res.status(409).json({ error: 'No active link' })
+    await doc.save()
+    await recordAudit(req.actor, 'finalize.revoke', 'application', doc._id, doc.firstName)
+    const item = toApplication(doc)
+    publish('application', item)
+    res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.get('/registrations/:id/receipt', recruitment, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id).select('finalization').lean()
+    if (!doc) return notFound(res)
+    const stored = await readReceipt(req.params.id)
+    if (!stored) return res.status(404).json({ error: 'Receipt not found' })
+    res.set({
+      'Content-Type': stored.contentType,
+      'Content-Length': String(stored.data.length),
+      'Cache-Control': 'private, no-store',
+      'Content-Disposition': `inline; filename="${(stored.originalName || 'receipt').replace(/[^\w.\-]+/g, '_')}"`,
+    })
+    res.send(stored.data)
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.post('/registrations/:id/payment/confirm', recruitment, async (req, res, next) => {
+  try {
+    if (!can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id)
+    if (!doc) return notFound(res)
+    if (doc.status !== 'payment_review' && doc.finalization?.paymentStatus !== 'pending') {
+      return res.status(409).json({ error: 'No payment to confirm' })
+    }
+    if (!doc.finalization?.receiptUploadedAt) return res.status(409).json({ error: 'No receipt' })
+    if (!doc.finalization) doc.finalization = {}
+    doc.finalization.paymentStatus = 'confirmed'
+    doc.finalization.paymentReviewedAt = new Date()
+    doc.finalization.paymentReviewedBy = req.actor.name
+    doc.finalization.paymentRejectReason = ''
+    if (doc.status !== 'active') {
+      doc.history.push({ from: doc.status, status: 'active', at: new Date() })
+      doc.status = 'active'
+    }
+    doc.reviewedBy = req.actor.name
+    doc.reviewedAt = new Date()
+    pushFinalizeEvent(doc, 'payment.confirmed', req.actor.name)
+    await doc.save()
+    await recordAudit(req.actor, 'payment.confirm', 'application', doc._id, doc.firstName)
+    const item = toApplication(doc)
+    publish('application', item)
+    res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRouter.post('/registrations/:id/payment/reject', recruitment, async (req, res, next) => {
+  try {
+    if (!can(req.actor, 'recruitment.decide')) return res.status(403).json({ error: 'Forbidden' })
+    if (!mongoose.isValidObjectId(req.params.id)) return notFound(res)
+    const doc = await Registration.findById(req.params.id)
+    if (!doc) return notFound(res)
+    if (doc.status !== 'payment_review' && doc.finalization?.paymentStatus !== 'pending') {
+      return res.status(409).json({ error: 'No payment to reject' })
+    }
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) : ''
+    if (reason.length < 3) return res.status(422).json({ error: 'Reason required', fields: { reason: 'required' } })
+    if (!doc.finalization) doc.finalization = {}
+    doc.finalization.paymentStatus = 'rejected'
+    doc.finalization.paymentReviewedAt = new Date()
+    doc.finalization.paymentReviewedBy = req.actor.name
+    doc.finalization.paymentRejectReason = reason
+    doc.finalization.receiptUploadedAt = null
+    doc.finalization.receiptName = ''
+    doc.finalization.receiptBytes = 0
+    doc.finalization.receiptType = ''
+    await removeReceipt(doc._id).catch(() => {})
+    if (doc.status === 'payment_review') {
+      doc.history.push({ from: doc.status, status: 'finalizing', at: new Date() })
+      doc.status = 'finalizing'
+    }
+    pushFinalizeEvent(doc, 'payment.rejected', req.actor.name, reason)
+    await doc.save()
+    await recordAudit(req.actor, 'payment.reject', 'application', doc._id, reason)
+    const item = toApplication(doc)
+    publish('application', item)
+    res.json({ item, transitions: TRANSITIONS[doc.status] || [] })
   } catch (error) {
     next(error)
   }

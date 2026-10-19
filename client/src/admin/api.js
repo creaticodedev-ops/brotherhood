@@ -87,6 +87,12 @@ export const adminApi = {
   staff: (signal) => request('/ops/staff', { signal }),
   saveStaff: (account) => request(account.id ? `/ops/staff/${encodeURIComponent(account.id)}` : '/ops/staff', { method: account.id ? 'PATCH' : 'POST', body: account }),
   openWhatsApp: (id, message, force = false) => request(`/registrations/${encodeURIComponent(id)}/whatsapp`, { method: 'POST', body: { message, force } }),
+  generateFinalizeLink: (id) => request(`/registrations/${encodeURIComponent(id)}/finalize-link`, { method: 'POST', body: {} }),
+  revokeFinalizeLink: (id) => request(`/registrations/${encodeURIComponent(id)}/finalize-link/revoke`, { method: 'POST', body: {} }),
+  confirmPayment: (id) => request(`/registrations/${encodeURIComponent(id)}/payment/confirm`, { method: 'POST', body: {} }),
+  rejectPayment: (id, reason) => request(`/registrations/${encodeURIComponent(id)}/payment/reject`, { method: 'POST', body: { reason } }),
+  membershipSettings: (signal) => request('/membership-settings', { signal }),
+  saveMembershipSettings: (body) => request('/membership-settings', { method: 'PUT', body }),
   registrationWindow: (signal) => request('/registration-window', { signal }),
   saveRegistrationWindow: (body) => request('/registration-window', { method: 'PUT', body }),
 }

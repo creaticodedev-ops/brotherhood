@@ -6,6 +6,7 @@ import { CheckIcon, CloseIcon, CopyIcon, MailIcon, WhatsAppIcon } from './icons'
 import { useDialogFocus } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
+import { FinalizePanel } from './FinalizePanel'
 import { confirmationMessage, messageLocale, openWhatsApp } from './whatsapp'
 
 const ACTION_STYLE = {
@@ -14,6 +15,8 @@ const ACTION_STYLE = {
   review: 'btn-ghost',
   accepted: 'btn-primary',
   approved: 'btn-primary',
+  finalizing: 'btn-ghost',
+  payment_review: 'btn-ghost',
   active: 'btn-primary',
   completed: 'btn-primary',
   rejected: 'adm-btn-danger',
@@ -105,7 +108,7 @@ const MembershipFile = ({ item, onChanged }) => {
   )
 }
 const ACTION_ORDER = ['approved', 'active', 'completed', 'pending', 'rejected']
-const CONFIRMED = ['approved', 'accepted', 'active']
+const CONFIRMED = ['approved', 'accepted', 'finalizing', 'payment_review', 'active']
 
 const WhatsAppConfirm = ({ item, notice }) => {
   const a = useAdminText()
@@ -277,7 +280,13 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
     }
   }
 
-  const actions = ACTION_ORDER.filter((status) => state.transitions.includes(status))
+  const actions = ACTION_ORDER.filter((status) => {
+    if (!state.transitions.includes(status)) return false
+    // Membership activation goes through payment confirmation, not the decision buttons.
+    if (item?.kind === 'membership' && status === 'active') return false
+    if (item?.kind === 'membership' && status === 'finalizing') return false
+    return true
+  })
 
   return (
     <div className={`adm-drawer-root${closing ? ' is-closing' : ''}`}>
@@ -370,7 +379,19 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
               ) : null}
             </section>
 
-            {CONFIRMED.includes(item.status) ? <WhatsAppConfirm key={item.id} item={item} notice={waNotice} /> : null}
+            {['approved', 'finalizing', 'payment_review', 'active'].includes(item.status) ? (
+              <FinalizePanel
+                item={item}
+                onUpdated={(data) => {
+                  setState({ id, item: data.item, transitions: data.transitions, error: null })
+                  onChanged()
+                }}
+              />
+            ) : null}
+
+            {CONFIRMED.includes(item.status) && item.kind !== 'membership' ? (
+              <WhatsAppConfirm key={item.id} item={item} notice={waNotice} />
+            ) : null}
 
             <section className="adm-block">
               <h3>{a('detail.identity')}</h3>

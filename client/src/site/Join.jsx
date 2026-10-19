@@ -311,12 +311,13 @@ export const Join = () => {
       if (current?.url) URL.revokeObjectURL(current.url)
       return null
     })
-    setErrors((current) => ({ ...current, photo: '' }))
+    setErrors((current) => ({ ...current, photo: copy.photoRequired }))
   }
 
-  const validate = (index = step) => {
+  const validate = (index = step, portraitState = portrait) => {
     const next = {}
     if (index === 0) {
+      if (!portraitState?.dataUrl) next.photo = copy.photoRequired
       if (values.firstName.trim().length < 2) next.firstName = copy.required
       if (values.lastName.trim().length < 2) next.lastName = copy.required
       const age = Number(values.age)
@@ -376,8 +377,15 @@ export const Join = () => {
 
   const send = async () => {
     if (locked) return
+    if (!portrait?.dataUrl) {
+      setStep(0)
+      setErrors({ photo: copy.photoRequired })
+      window.scrollTo(0, 0)
+      return
+    }
     if (![0, 1, 2].every((index) => validate(index))) {
       setStep(0)
+      window.scrollTo(0, 0)
       return
     }
     if (!validate(3)) {
@@ -406,7 +414,7 @@ export const Join = () => {
         squads: values.squads,
         practical: values.practical,
         locale,
-        photo: portrait?.dataUrl || '',
+        photo: portrait.dataUrl,
         challenges: {
           asfi: values.asfi,
           fund: values.fund,
@@ -419,8 +427,9 @@ export const Join = () => {
     } catch (error) {
       if (error.fields?.photo) {
         setStep(0)
-        setErrors({ photo: copy.photoInvalid })
+        setErrors({ photo: error.fields.photo === 'required' ? copy.photoRequired : copy.photoInvalid })
         setStatus('idle')
+        window.scrollTo(0, 0)
         return
       }
       setStatus('error')
@@ -488,27 +497,63 @@ export const Join = () => {
 
       {step === 0 ? (
         <div className="bh-form">
-          <div className="bh-field is-wide">
-            <p className="gender-legend" id="photo-label">{copy.fields.photo}</p>
-            <div className={`photo-pick${portrait ? ' has-photo' : ''}`}>
-              <input id="profile-photo" className="photo-pick-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} aria-labelledby="photo-label" />
+          <div className={`bh-field is-wide photo-field${errors.photo ? ' has-error' : ''}${portrait ? ' has-photo' : ''}`}>
+            <p className="gender-legend" id="photo-label">
+              {copy.fields.photo}
+              <span className="photo-required-mark" aria-hidden="true">
+                {' '}
+                *
+              </span>
+            </p>
+            <div className={`photo-pick${portrait ? ' has-photo' : ''}${errors.photo ? ' is-invalid' : ''}`}>
+              <input
+                id="profile-photo"
+                className="photo-pick-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/*"
+                onChange={choosePhoto}
+                aria-labelledby="photo-label"
+                aria-required="true"
+                aria-invalid={errors.photo ? 'true' : undefined}
+                aria-describedby={errors.photo ? 'photo-error' : 'photo-hint'}
+              />
               <span className="photo-pick-frame" aria-hidden="true">
-                {portrait ? <img src={portrait.url} alt="" /> : (
+                {portrait ? (
+                  <img src={portrait.url} alt="" />
+                ) : (
                   <svg viewBox="0 0 24 24" width="28" height="28">
                     <circle cx="12" cy="9" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                    <path d="M5.5 19.2c1.4-2.6 3.6-3.8 6.5-3.8s5.1 1.2 6.5 3.8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <path
+                      d="M5.5 19.2c1.4-2.6 3.6-3.8 6.5-3.8s5.1 1.2 6.5 3.8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 )}
               </span>
               <span className="photo-pick-copy">
                 <span className="photo-pick-add">{portrait ? copy.photoReplace : copy.photoAdd}</span>
-                <small>{copy.photoHint}</small>
+                <small id="photo-hint">{copy.photoHint}</small>
                 {portrait ? (
-                  <button type="button" className="photo-pick-remove" onClick={clearPhoto}>{copy.photoRemove}</button>
+                  <button
+                    type="button"
+                    className="photo-pick-remove"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      clearPhoto()
+                    }}
+                  >
+                    {copy.photoRemove}
+                  </button>
                 ) : null}
               </span>
             </div>
-            <p className="bh-error" role={errors.photo ? 'alert' : undefined}>{errors.photo || ''}</p>
+            <p className="bh-error" id="photo-error" role={errors.photo ? 'alert' : undefined}>
+              {errors.photo || ''}
+            </p>
           </div>
           {input('firstName')}
           {input('lastName')}

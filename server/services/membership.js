@@ -12,9 +12,9 @@ const signatureOk = (type, buffer) => {
   return buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP'
 }
 
-/** Reads an optional profile image. Empty is allowed. A present value must be a real JPEG, PNG, or WebP. */
+/** Reads a profile image. Empty returns `{ missing: true }`. A present value must be a real JPEG, PNG, or WebP. */
 export const readPhoto = (value) => {
-  if (value == null || value === '') return { photo: null }
+  if (value == null || value === '') return { photo: null, missing: true }
   if (typeof value !== 'string') return { error: 'invalid' }
   const match = value.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/)
   if (!match) return { error: 'invalid' }
@@ -79,7 +79,8 @@ export const validateMembership = (body = {}, phone) => {
   }
   const photo = readPhoto(body.photo)
   const errors = {}
-  if (photo.error) errors.photo = 'invalid'
+  if (photo.missing) errors.photo = 'required'
+  else if (photo.error) errors.photo = 'invalid'
   if (data.firstName.length < 2) errors.firstName = 'required'
   if (data.lastName.length < 2) errors.lastName = 'required'
   if (data.city.length < 2) errors.city = 'required'
