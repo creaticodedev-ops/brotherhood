@@ -25,11 +25,22 @@ test('normalizes Moroccan and international phones without duplicating 212', () 
 })
 
 test('click-to-chat URL encodes accents, emojis and line breaks', () => {
-  const message = 'Salam Amine 👋\n\nFélicitations !'
+  const message =
+    'Salam Amine 👋\n\nBonne nouvelle ! Ta demande d’adhésion à THE BROTHERHOOD a été approuvée.\n\nhttps://chat.whatsapp.com/AbCdEfGhIjKlMnOp'
   const url = whatsappClickUrl('+212612345678', message)
   assert.ok(url.startsWith('https://wa.me/212612345678?text='))
   assert.ok(url.includes(encodeURIComponent('👋')))
-  assert.ok(url.includes(encodeURIComponent('Félicitations')))
+  assert.ok(url.includes(encodeURIComponent('Bonne nouvelle')))
+  assert.ok(url.includes(encodeURIComponent('https://chat.whatsapp.com/AbCdEfGhIjKlMnOp')))
   assert.ok(url.includes('%0A'))
   assert.equal(isWhatsAppGroupUrl('https://chat.whatsapp.com/AbCdEfGhIjKlMnOp'), true)
+})
+
+test('pending and rejected are not WhatsApp-eligible', () => {
+  for (const status of ['pending', 'rejected', 'new', 'review']) {
+    assert.equal(isWhatsAppEligible({ status }), false)
+  }
+  for (const status of ['approved', 'accepted', 'finalizing', 'payment_review', 'active']) {
+    assert.equal(isWhatsAppEligible({ status }), true)
+  }
 })

@@ -8,7 +8,7 @@ import { STATUS_ORDER } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
 import { WhatsAppMessageModal } from './WhatsAppMessageModal'
-import { confirmationMessage, isWhatsAppEligible, openWhatsApp } from './whatsapp'
+import { confirmationMessage, isWhatsAppEligible, isWhatsAppGroupUrl, openWhatsApp } from './whatsapp'
 
 const OFFERS = ['essential', 'advanced', 'premium']
 const DURATIONS = ['15d', '1m']
@@ -248,6 +248,9 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
   const openWhatsAppFor = (targets) => {
     const list = (Array.isArray(targets) ? targets : [targets]).filter(isWhatsAppEligible)
     if (!list.length) return
+    if (!isWhatsAppGroupUrl(groupLink)) {
+      setFlash({ tone: 'error', text: a('whatsapp.missingGroupFlash') })
+    }
     setWaTargets(list)
   }
 
@@ -533,12 +536,13 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
                         {isWhatsAppEligible(item) ? (
                           <button
                             type="button"
-                            className="adm-quick-btn is-whatsapp"
+                            className="btn btn-sm adm-wa-row-btn"
                             onClick={() => openWhatsAppFor(item)}
                             aria-label={`${a('whatsapp.sendAction')} — ${fullName(item)}`}
                             title={a('whatsapp.sendAction')}
                           >
                             <WhatsAppIcon size={16} />
+                            <span>{a('whatsapp.sendAction')}</span>
                           </button>
                         ) : null}
                         {canDelete ? (

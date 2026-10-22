@@ -44,11 +44,11 @@ const FINALIZE = {
 /** Welcome + official group invite for previously approved members. French is the default template. */
 const APPROVED_GROUP = {
   fr: ({ name, groupLink }) =>
-    `Salam ${name} 👋\n\nFélicitations ! Ta demande d’adhésion à THE BROTHERHOOD a été approuvée. Nous sommes ravis de t’accueillir parmi nous.\n\nPour la suite, rejoins notre groupe WhatsApp officiel via le lien ci-dessous :\n\n${groupLink || '[lien du groupe WhatsApp]'}\n\nBienvenue dans la famille THE BROTHERHOOD ! 🤝`,
+    `Salam ${name} 👋\n\nBonne nouvelle ! Ta demande d’adhésion à THE BROTHERHOOD a été approuvée. Félicitations et bienvenue parmi nous ! 🤝\n\nPour rejoindre notre communauté, merci de cliquer sur le lien ci-dessous et de rejoindre notre groupe WhatsApp officiel :\n\n${groupLink}\n\nNous sommes ravis de t’accueillir dans la famille THE BROTHERHOOD !`,
   en: ({ name, groupLink }) =>
-    `Salam ${name} 👋\n\nCongratulations! Your application to join THE BROTHERHOOD has been approved. We’re glad to welcome you.\n\nNext, join our official WhatsApp group using the link below:\n\n${groupLink || '[WhatsApp group link]'}\n\nWelcome to the THE BROTHERHOOD family! 🤝`,
+    `Salam ${name} 👋\n\nGood news! Your application to join THE BROTHERHOOD has been approved. Congratulations and welcome! 🤝\n\nTo join our community, please open the link below and join our official WhatsApp group:\n\n${groupLink}\n\nWe’re glad to welcome you into the THE BROTHERHOOD family!`,
   ar: ({ name, groupLink }) =>
-    `سلام ${name} 👋\n\nتهانينا! تمت الموافقة على طلب انضمامك إلى THE BROTHERHOOD. يسعدنا استقبالك معنا.\n\nللخطوة التالية، انضم إلى مجموعة واتساب الرسمية عبر الرابط أدناه:\n\n${groupLink || '[رابط مجموعة واتساب]'}\n\nمرحباً بك في عائلة THE BROTHERHOOD! 🤝`,
+    `سلام ${name} 👋\n\nخبر سار! تمت الموافقة على طلب انضمامك إلى THE BROTHERHOOD. تهانينا ومرحباً بك معنا! 🤝\n\nللانضمام إلى مجتمعنا، اضغط على الرابط أدناه وانضم إلى مجموعة واتساب الرسمية:\n\n${groupLink}\n\nيسعدنا استقبالك في عائلة THE BROTHERHOOD!`,
 }
 
 const TEMPLATES = {

@@ -97,37 +97,37 @@ export const WhatsAppMessageModal = ({ items, initialGroupLink = '', canSaveLink
     }
   }
 
+  const linkReady = Boolean(groupLink.trim()) && isWhatsAppGroupUrl(groupLink)
+
   const open = async () => {
     setError('')
     setNotice('')
     const link = groupLink.trim()
-    if (link && !isWhatsAppGroupUrl(link)) {
+    if (!link) {
+      setError(a('whatsapp.missingGroup'))
+      return
+    }
+    if (!isWhatsAppGroupUrl(link)) {
       setError(a('whatsapp.invalidGroup'))
       return
     }
-    if (!draft.trim()) {
-      setError(a('whatsapp.emptyMessage'))
+    if (!draft.trim() || !draft.includes(link)) {
+      setError(a(draft.trim() ? 'whatsapp.linkNotInMessage' : 'whatsapp.emptyMessage'))
       return
     }
     const digits = normalizeWhatsAppDigits(phone)
-    if (phone.trim() && !isValidWhatsAppPhone(phone)) {
+    if (!phone.trim()) {
+      setError(a('whatsapp.phoneRequired'))
+      return
+    }
+    if (!isValidWhatsAppPhone(phone)) {
       setError(a('whatsapp.invalidPhone'))
       return
     }
     setBusy(true)
     try {
-      if (digits) {
-        const opened = openWhatsApp(digits, draft)
-        setNotice(opened ? 'opened' : 'blocked')
-      } else {
-        try {
-          await navigator.clipboard.writeText(draft)
-          setNotice('noPhoneOpen')
-        } catch {
-          setNotice('noPhone')
-        }
-        openWhatsApp('', draft)
-      }
+      const opened = openWhatsApp(digits, draft)
+      setNotice(opened ? 'opened' : 'blocked')
       try {
         const data = await adminApi.openWhatsApp(item.id, draft, Boolean(item.whatsapp?.openedAt))
         onPrepared?.(data.item || item)
@@ -182,6 +182,12 @@ export const WhatsAppMessageModal = ({ items, initialGroupLink = '', canSaveLink
           {a('whatsapp.disclaimer')}
         </p>
 
+        {!linkReady ? (
+          <p className="adm-wa-warning" role="alert">
+            {a(groupLink.trim() ? 'whatsapp.invalidGroup' : 'whatsapp.missingGroup')}
+          </p>
+        ) : null}
+
         <label className="adm-wa-label" htmlFor="adm-wa-group">
           {a('whatsapp.groupLink')}
         </label>
@@ -193,11 +199,11 @@ export const WhatsAppMessageModal = ({ items, initialGroupLink = '', canSaveLink
           placeholder="https://chat.whatsapp.com/…"
           value={groupLink}
           onChange={(event) => setGroupLink(event.target.value)}
-          aria-invalid={groupLink.trim() && !isWhatsAppGroupUrl(groupLink) ? 'true' : undefined}
+          aria-invalid={!linkReady ? 'true' : undefined}
         />
         <p className="adm-wa-hint">{a('whatsapp.groupHint')}</p>
         {canSaveLink ? (
-          <button type="button" className="adm-link" disabled={savingLink} onClick={saveDefaultLink}>
+          <button type="button" className="adm-link" disabled={savingLink || !linkReady} onClick={saveDefaultLink}>
             {savingLink ? a('whatsapp.savingLink') : a('whatsapp.saveLink')}
           </button>
         ) : null}
@@ -278,7 +284,7 @@ export const WhatsAppMessageModal = ({ items, initialGroupLink = '', canSaveLink
             {copied ? <CheckIcon /> : <CopyIcon />}
             <span>{copied ? a('whatsapp.copied') : a('whatsapp.copy')}</span>
           </button>
-          <button type="button" className="btn btn-sm btn-primary adm-wa-send" disabled={busy} onClick={open}>
+          <button type="button" className="btn btn-sm btn-primary adm-wa-send" disabled={busy || !linkReady} onClick={open}>
             <WhatsAppIcon />
             <span>{busy ? '…' : a('whatsapp.open')}</span>
           </button>

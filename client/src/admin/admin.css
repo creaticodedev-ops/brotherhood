@@ -2141,6 +2141,56 @@ html[lang='ar'] .adm-panel-head h2 {
   color: #25d366;
 }
 
+.adm-wa-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 34px;
+  padding-inline: 10px 12px;
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  border-radius: 10px;
+  background: rgba(37, 211, 102, 0.1);
+  color: #25d366;
+  white-space: nowrap;
+}
+
+.adm-wa-row-btn:hover:not(:disabled),
+.adm-wa-row-btn:focus-visible {
+  border-color: rgba(37, 211, 102, 0.75);
+  background: rgba(37, 211, 102, 0.18);
+  color: #3ee67a;
+}
+
+.adm-wa-row-btn span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .adm-wa-row-btn {
+    white-space: normal;
+    text-align: start;
+    line-height: 1.2;
+    max-width: 11.5rem;
+  }
+
+  .adm-wa-row-btn span {
+    font-size: 0.68rem;
+  }
+}
+
+.adm-wa-warning {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 119, 110, 0.5);
+  background: rgba(180, 83, 75, 0.12);
+  color: #e3a59e;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
 .adm-quick-btn:disabled {
   cursor: progress;
   opacity: 0.5;
