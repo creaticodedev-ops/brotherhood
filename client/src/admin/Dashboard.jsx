@@ -349,7 +349,14 @@ export const Dashboard = ({ onLogout }) => {
           ) : route.view === 'content' ? (
             <ContentDesk key={route.intent?.key} intent={route.intent} />
           ) : route.view === 'applications' ? (
-            <Applications version={version} fresh={fresh} onOpen={openApplication} onChanged={refresh} canDelete={permit('recruitment.delete')} />
+            <Applications
+              version={version}
+              fresh={fresh}
+              onOpen={openApplication}
+              onChanged={refresh}
+              canDelete={permit('recruitment.delete')}
+              canSaveWhatsAppLink={permit('recruitment.decide') || permit('registration.manage')}
+            />
           ) : route.view === 'missions' ? (
             <MissionsDesk key={route.intent?.key} intent={route.intent} canManage={permit('missions.manage')} canFinance={show.caisse} onNavigate={goTo} />
           ) : route.view === 'caisse' ? (

@@ -3,6 +3,22 @@ import { en } from '../i18n/dictionaries/en'
 import { fr } from '../i18n/dictionaries/fr'
 import { getNested } from '../i18n/locales'
 import { numberLocale } from '../market/format'
+import {
+  isValidWhatsAppPhone,
+  isWhatsAppEligible,
+  isWhatsAppGroupUrl,
+  normalizeWhatsAppDigits,
+  whatsappClickUrl,
+  WHATSAPP_ELIGIBLE,
+} from '../../../shared/whatsapp.js'
+
+export {
+  isValidWhatsAppPhone,
+  isWhatsAppEligible,
+  isWhatsAppGroupUrl,
+  normalizeWhatsAppDigits,
+  WHATSAPP_ELIGIBLE,
+}
 
 const PUBLIC = { fr, en, ar }
 
@@ -23,6 +39,16 @@ const FINALIZE = {
     `Hello ${name},\n\nCongratulations — your membership application has been approved!\n\nTo complete your membership, open your personal space using this link:\n\n${link}\n\nThere you can confirm your details, review and accept the membership terms, and upload your 100 DH payment receipt.\n\nWelcome to THE BROTHERHOOD.`,
   ar: ({ name, link }) =>
     `مرحباً ${name}،\n\nتهانينا، تمت الموافقة على طلب عضويتك!\n\nلإتمام عضويتك، افتح مساحتك الشخصية عبر الرابط التالي:\n\n${link}\n\nستتمكن من إكمال معلوماتك، وقراءة شروط العضوية وقبولها، ثم إرسال إيصال دفع 100 درهم.\n\nمرحباً بك في THE BROTHERHOOD.`,
+}
+
+/** Welcome + official group invite for previously approved members. French is the default template. */
+const APPROVED_GROUP = {
+  fr: ({ name, groupLink }) =>
+    `Salam ${name} 👋\n\nFélicitations ! Ta demande d’adhésion à THE BROTHERHOOD a été approuvée. Nous sommes ravis de t’accueillir parmi nous.\n\nPour la suite, rejoins notre groupe WhatsApp officiel via le lien ci-dessous :\n\n${groupLink || '[lien du groupe WhatsApp]'}\n\nBienvenue dans la famille THE BROTHERHOOD ! 🤝`,
+  en: ({ name, groupLink }) =>
+    `Salam ${name} 👋\n\nCongratulations! Your application to join THE BROTHERHOOD has been approved. We’re glad to welcome you.\n\nNext, join our official WhatsApp group using the link below:\n\n${groupLink || '[WhatsApp group link]'}\n\nWelcome to the THE BROTHERHOOD family! 🤝`,
+  ar: ({ name, groupLink }) =>
+    `سلام ${name} 👋\n\nتهانينا! تمت الموافقة على طلب انضمامك إلى THE BROTHERHOOD. يسعدنا استقبالك معنا.\n\nللخطوة التالية، انضم إلى مجموعة واتساب الرسمية عبر الرابط أدناه:\n\n${groupLink || '[رابط مجموعة واتساب]'}\n\nمرحباً بك في عائلة THE BROTHERHOOD! 🤝`,
 }
 
 const TEMPLATES = {
@@ -58,12 +84,26 @@ export const finalizeInviteMessage = (item, link) => {
   return FINALIZE[locale]({ name: item.firstName.trim(), link })
 }
 
+/** Best phone for messaging: finalization WhatsApp first, then registration phone. */
+export const memberWhatsAppPhone = (item) => {
+  const fromFinalize = item?.finalization?.whatsapp || ''
+  const fromRegistration = item?.phone || ''
+  return String(fromFinalize || fromRegistration).trim()
+}
+
+export const approvedGroupMessage = (item, groupLink = '', localeOverride) => {
+  const locale = APPROVED_GROUP[localeOverride] ? localeOverride : messageLocale(item)
+  const name = String(item?.firstName || '').trim() || 'ami'
+  const link = String(groupLink || '').trim()
+  return APPROVED_GROUP[locale]({ name, groupLink: link })
+}
+
 /** Number stored by the API in international format (+ country code); wa.me expects digits only. */
-export const whatsappUrl = (phone, message) => `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+export const whatsappUrl = (phone, message) => whatsappClickUrl(phone, message)
 
 /** Opens WhatsApp in a new tab; returns false when no window handle came back (popup blocked, or some embedded browsers). */
 export const openWhatsApp = (phone, message) => {
-  const win = window.open(whatsappUrl(phone, message), '_blank')
+  const win = window.open(whatsappClickUrl(phone, message), '_blank')
   if (!win) return false
   win.opener = null
   return true

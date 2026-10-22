@@ -24,7 +24,7 @@ const COPY = {
     payment: 'Instructions de paiement',
     amount: 'Montant (DH)',
     currency: 'Devise',
-    group: 'Lien du groupe WhatsApp',
+    group: 'Lien du groupe WhatsApp (https://chat.whatsapp.com/…)',
     expiry: 'Durée de validité du lien (jours)',
     siteUrl: 'URL publique du site (pour générer les liens)',
     save: 'Enregistrer',

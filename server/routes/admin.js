@@ -373,6 +373,35 @@ const recruitment = async (req, res, next) => {
   next()
 }
 
+/** Read-only WhatsApp defaults for recruiters preparing messages to approved members. */
+adminRouter.get('/whatsapp-defaults', recruitment, async (_req, res, next) => {
+  try {
+    const settings = await loadMembershipSettings()
+    res.json({ whatsappGroupUrl: settings.whatsappGroupUrl || '' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/** Persist the default group invite. Decision-makers and registration managers may update it. */
+adminRouter.put('/whatsapp-defaults', async (req, res, next) => {
+  try {
+    const actor = await currentActor(req)
+    if (!actor) return res.status(401).json({ error: 'Unauthorized' })
+    if (!can(actor, 'recruitment.decide') && !can(actor, 'registration.manage')) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    if (dbState() !== 'connected') return res.status(503).json({ error: 'Database unavailable' })
+    const { errors, data } = readMembershipSettingsInput({ whatsappGroupUrl: req.body?.whatsappGroupUrl ?? '' })
+    if (errors.whatsappGroupUrl) return res.status(422).json({ error: 'Invalid settings', fields: errors })
+    const saved = await saveMembershipSettings({ whatsappGroupUrl: data.whatsappGroupUrl ?? '' })
+    await recordAudit(actor, 'whatsapp.defaults', 'registration', 'membership', saved.whatsappGroupUrl || 'cleared')
+    res.json({ whatsappGroupUrl: saved.whatsappGroupUrl || '' })
+  } catch (error) {
+    next(error)
+  }
+})
+
 adminRouter.get('/registrations', recruitment, async (req, res, next) => {
   try {
     const limit = intIn(req.query.limit, 1, PAGE_MAX, 20)

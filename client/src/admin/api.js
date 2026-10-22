@@ -93,6 +93,8 @@ export const adminApi = {
   rejectPayment: (id, reason) => request(`/registrations/${encodeURIComponent(id)}/payment/reject`, { method: 'POST', body: { reason } }),
   membershipSettings: (signal) => request('/membership-settings', { signal }),
   saveMembershipSettings: (body) => request('/membership-settings', { method: 'PUT', body }),
+  whatsappDefaults: (signal) => request('/whatsapp-defaults', { signal }),
+  saveWhatsAppDefaults: (body) => request('/whatsapp-defaults', { method: 'PUT', body }),
   registrationWindow: (signal) => request('/registration-window', { signal }),
   saveRegistrationWindow: (body) => request('/registration-window', { method: 'PUT', body }),
 }

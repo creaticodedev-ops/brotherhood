@@ -7,7 +7,8 @@ import { useDialogFocus } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
 import { FinalizePanel } from './FinalizePanel'
-import { confirmationMessage, messageLocale, openWhatsApp } from './whatsapp'
+import { WhatsAppMessageModal } from './WhatsAppMessageModal'
+import { confirmationMessage, isWhatsAppEligible, messageLocale, openWhatsApp } from './whatsapp'
 
 const ACTION_STYLE = {
   new: 'btn-ghost',
@@ -215,8 +216,19 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
   const [actionError, setActionError] = useState('')
   const [copied, setCopied] = useState(false)
   const [waNotice, setWaNotice] = useState('')
+  const [waModal, setWaModal] = useState(false)
+  const [groupLink, setGroupLink] = useState('')
   const [closing, setClosing] = useState(false)
   const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    adminApi
+      .whatsappDefaults(controller.signal)
+      .then((data) => setGroupLink(data.whatsappGroupUrl || ''))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   const close = () => {
     if (closing) return
@@ -393,6 +405,19 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
               <WhatsAppConfirm key={item.id} item={item} notice={waNotice} />
             ) : null}
 
+            {isWhatsAppEligible(item) ? (
+              <section className="adm-block adm-wa" aria-labelledby="adm-wa-approved-title">
+                <h3 id="adm-wa-approved-title">{a('whatsapp.modalTitle')}</h3>
+                <p className="adm-muted">{a('whatsapp.drawerLead')}</p>
+                <div className="adm-actions">
+                  <button type="button" className="btn btn-sm btn-primary adm-wa-send" onClick={() => setWaModal(true)}>
+                    <WhatsAppIcon />
+                    <span>{a('whatsapp.sendAction')}</span>
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
             <section className="adm-block">
               <h3>{a('detail.identity')}</h3>
               <dl className="adm-facts">
@@ -520,6 +545,19 @@ export const ApplicationDrawer = ({ id, version, onClose, onChanged }) => {
           </div>
         )}
       </aside>
+
+      {waModal && item ? (
+        <WhatsAppMessageModal
+          items={[item]}
+          initialGroupLink={groupLink}
+          canSaveLink
+          onClose={() => setWaModal(false)}
+          onPrepared={(updated) => {
+            setState((prev) => ({ ...prev, item: { ...prev.item, ...updated } }))
+            onChanged()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

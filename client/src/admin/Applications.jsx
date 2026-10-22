@@ -3,11 +3,12 @@ import { useI18n } from '../i18n/I18nProvider'
 import { adminApi } from './api'
 import { DateField } from './DatePicker'
 import { formatClock, formatCount, formatDate, formatMoney, fullName } from './format'
-import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon, TrashIcon } from './icons'
+import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon, SortIcon, TrashIcon, WhatsAppIcon } from './icons'
 import { STATUS_ORDER } from './hooks'
 import { Avatar, ErrorState, StatusPill } from './parts'
 import { useAdminText } from './strings'
-import { confirmationMessage, openWhatsApp } from './whatsapp'
+import { WhatsAppMessageModal } from './WhatsAppMessageModal'
+import { confirmationMessage, isWhatsAppEligible, openWhatsApp } from './whatsapp'
 
 const OFFERS = ['essential', 'advanced', 'premium']
 const DURATIONS = ['15d', '1m']
@@ -87,7 +88,7 @@ const useDebounced = (value, ms) => {
   return debounced
 }
 
-export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = false }) => {
+export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = false, canSaveWhatsAppLink = false }) => {
   const a = useAdminText()
   const { t, locale } = useI18n()
   const [query, setQuery] = useState('')
@@ -109,8 +110,20 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
   const [doomed, setDoomed] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [flash, setFlash] = useState(null)
+  const [selected, setSelected] = useState(() => new Set())
+  const [waTargets, setWaTargets] = useState(null)
+  const [groupLink, setGroupLink] = useState('')
   const q = useDebounced(query.trim(), SEARCH_DELAY)
   const listRef = useRef(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    adminApi
+      .whatsappDefaults(controller.signal)
+      .then((result) => setGroupLink(result.whatsappGroupUrl || ''))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     if (!flash) return undefined
@@ -140,6 +153,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
         setData(result)
         setError(null)
         setLoading(false)
+        setSelected(new Set())
       })
       .catch((err) => {
         if (err.name === 'AbortError') return
@@ -209,6 +223,34 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
   const allCount = STATUS_ORDER.reduce((sum, key) => sum + (counts[key] || 0), 0)
   const filtered = Boolean(q || status || offer || duration || gender || squad || from || to)
   const sortId = `${sort.key}:${sort.order}`
+  const eligibleOnPage = (data?.items || []).filter(isWhatsAppEligible)
+  const selectedItems = (data?.items || []).filter((item) => selected.has(item.id) && isWhatsAppEligible(item))
+  const allEligibleSelected = eligibleOnPage.length > 0 && eligibleOnPage.every((item) => selected.has(item.id))
+
+  const toggleSelect = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllEligible = () => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (allEligibleSelected) eligibleOnPage.forEach((item) => next.delete(item.id))
+      else eligibleOnPage.forEach((item) => next.add(item.id))
+      return next
+    })
+  }
+
+  const openWhatsAppFor = (targets) => {
+    const list = (Array.isArray(targets) ? targets : [targets]).filter(isWhatsAppEligible)
+    if (!list.length) return
+    setWaTargets(list)
+  }
+
   const reset = () => {
     setQuery('')
     setStatus('')
@@ -330,6 +372,19 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
         </p>
       ) : null}
 
+      {selectedItems.length ? (
+        <div className="adm-bulk-bar" role="region" aria-label={a('whatsapp.bulkBar')}>
+          <p>{a('whatsapp.bulkSelected', { n: formatCount(selectedItems.length, locale) })}</p>
+          <button type="button" className="btn btn-sm btn-primary" onClick={() => openWhatsAppFor(selectedItems)}>
+            <WhatsAppIcon />
+            <span>{a('whatsapp.bulkSend')}</span>
+          </button>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSelected(new Set())}>
+            {a('whatsapp.bulkClear')}
+          </button>
+        </div>
+      ) : null}
+
       <section ref={listRef} className={`adm-panel adm-table-panel${loading && data ? ' is-loading' : ''}`} aria-busy={loading}>
         <span className="adm-progress" aria-hidden="true" />
         {error && !data ? (
@@ -347,6 +402,15 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
             </caption>
             <thead>
               <tr>
+                <th scope="col" className="adm-col-check">
+                  <input
+                    type="checkbox"
+                    checked={allEligibleSelected}
+                    disabled={!eligibleOnPage.length}
+                    onChange={toggleSelectAllEligible}
+                    aria-label={a('whatsapp.selectAll')}
+                  />
+                </th>
                 {COLUMNS.map((column) => {
                   const active = column.sort && sort.key === column.sort
                   return (
@@ -374,7 +438,23 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
             </thead>
             <tbody>
               {data.items.map((item) => (
-                <tr key={item.id} className={`${fresh.has(item.id) ? 'is-fresh' : ''}${busy[item.id] ? ' is-busy' : ''}`.trim() || undefined} onClick={() => onOpen(item.id)}>
+                <tr
+                  key={item.id}
+                  className={`${fresh.has(item.id) ? 'is-fresh' : ''}${busy[item.id] ? ' is-busy' : ''}${selected.has(item.id) ? ' is-selected' : ''}`.trim() || undefined}
+                  onClick={() => onOpen(item.id)}
+                >
+                  <td className="adm-cell-check" onClick={(event) => event.stopPropagation()}>
+                    {isWhatsAppEligible(item) ? (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                        aria-label={a('whatsapp.selectOne', { name: fullName(item) })}
+                      />
+                    ) : (
+                      <span className="adm-check-spacer" aria-hidden="true" />
+                    )}
+                  </td>
                   <td className="adm-cell-applicant">
                     <Avatar item={item} viewable />
                     <span>
@@ -424,7 +504,7 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
                     <StatusPill status={item.status} />
                   </td>
                   <td className="is-actions" onClick={(event) => event.stopPropagation()}>
-                    {item.status === 'pending' || item.status === 'new' || canDelete ? (
+                    {item.status === 'pending' || item.status === 'new' || canDelete || isWhatsAppEligible(item) ? (
                       <span className="adm-quick">
                         {item.status === 'pending' || item.status === 'new' ? (
                           <>
@@ -449,6 +529,17 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
                               <CloseIcon size={16} />
                             </button>
                           </>
+                        ) : null}
+                        {isWhatsAppEligible(item) ? (
+                          <button
+                            type="button"
+                            className="adm-quick-btn is-whatsapp"
+                            onClick={() => openWhatsAppFor(item)}
+                            aria-label={`${a('whatsapp.sendAction')} — ${fullName(item)}`}
+                            title={a('whatsapp.sendAction')}
+                          >
+                            <WhatsAppIcon size={16} />
+                          </button>
                         ) : null}
                         {canDelete ? (
                           <button
@@ -503,6 +594,19 @@ export const Applications = ({ version, fresh, onOpen, onChanged, canDelete = fa
       </section>
 
       {doomed ? <ConfirmDelete item={doomed} pending={deleting} onCancel={() => setDoomed(null)} onConfirm={confirmDelete} /> : null}
+
+      {waTargets ? (
+        <WhatsAppMessageModal
+          items={waTargets}
+          initialGroupLink={groupLink}
+          canSaveLink={canSaveWhatsAppLink}
+          onClose={() => setWaTargets(null)}
+          onPrepared={(updated) => {
+            setData((prev) => prev && { ...prev, items: prev.items.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)) })
+            if (updated?.finalization || updated?.whatsapp) onChanged()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

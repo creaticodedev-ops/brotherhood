@@ -1,3 +1,4 @@
+import { isWhatsAppGroupUrl } from '../../shared/whatsapp.js'
 import { MembershipSettings } from '../models/MembershipSettings.js'
 
 const LOCALES = ['fr', 'en', 'ar']
@@ -17,6 +18,20 @@ const cleanUrl = (value) => {
     const url = new URL(raw)
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
     return url.toString()
+  } catch {
+    return null
+  }
+}
+
+/** Official WhatsApp group invite: https://chat.whatsapp.com/<code> */
+export const cleanWhatsAppGroupUrl = (value) => {
+  const raw = cleanText(value, 500)
+  if (!raw) return ''
+  if (!isWhatsAppGroupUrl(raw)) return null
+  try {
+    const url = new URL(raw)
+    const code = url.pathname.replace(/^\/+|\/+$/g, '')
+    return `https://chat.whatsapp.com/${code}`
   } catch {
     return null
   }
@@ -94,7 +109,7 @@ export const readMembershipSettingsInput = (body = {}) => {
   }
 
   if (body.whatsappGroupUrl !== undefined) {
-    const url = cleanUrl(body.whatsappGroupUrl)
+    const url = cleanWhatsAppGroupUrl(body.whatsappGroupUrl)
     if (body.whatsappGroupUrl && url === null) errors.whatsappGroupUrl = 'url'
     else data.whatsappGroupUrl = url || ''
   }
