@@ -106,13 +106,16 @@ export const adminApi = {
   saveNotice: (eventId, body) => request(`/events/${encodeURIComponent(eventId)}/notices`, { method: 'POST', body }),
   ackNotice: (eventId, id) => request(`/events/${encodeURIComponent(eventId)}/notices/${encodeURIComponent(id)}/ack`, { method: 'POST', body: {} }),
   eventRoster: (signal) => request('/events/roster', { signal }),
-  uploadEventBanner: (id, blob, confirmPublic) =>
+  uploadEventBanner: (id, blob, confirmPublic, onProgress) =>
     new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open('POST', `/api/admin/events/${encodeURIComponent(id)}/banner`)
       xhr.withCredentials = true
       xhr.setRequestHeader('content-type', blob.type)
       if (confirmPublic) xhr.setRequestHeader('x-confirm-public', 'yes')
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress?.(event.loaded / event.total)
+      }
       xhr.onload = () => {
         let data = {}
         try {

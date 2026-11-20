@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { TEAMS } from '../../../shared/eventProgram.js'
 import { publicUrl } from '../config/site'
 import { adminApi } from './api'
+import { prepareEventPoster } from './preparePoster'
 import { useI18n } from '../i18n/I18nProvider'
 import './eventDesk.css'
 
@@ -48,8 +49,13 @@ const COPY = {
     posterCancel: 'Annuler l’aperçu',
     posterSaved: 'Affiche enregistrée.',
     posterRemoved: 'Affiche retirée.',
-    posterType: 'Utilisez une image JPEG, PNG ou WebP.',
-    posterSize: 'L’image dépasse 4,5 Mo.',
+    posterType: 'Ce format n’est pas pris en charge. Utilisez une photo JPEG, PNG ou WebP.',
+    posterHeic: 'Cette photo de téléphone n’a pas pu être lue. Enregistrez-la en JPEG, puis réessayez.',
+    posterSize: 'Ce fichier est trop volumineux pour être traité. Choisissez une image de 25 Mo ou moins.',
+    posterRead: 'Cette image est illisible ou endommagée.',
+    posterOptimizing: 'Optimisation de l’image…',
+    posterOptimized: 'Image optimisée. Enregistrez pour la publier.',
+    posterUploading: 'Envoi de l’affiche…',
     posterError: 'L’affiche n’a pas pu être enregistrée.',
     posterRemoveConfirm: 'Retirer l’affiche de cet événement ?',
     public: 'Public',
@@ -112,8 +118,13 @@ const COPY = {
     posterCancel: 'Cancel preview',
     posterSaved: 'Poster saved.',
     posterRemoved: 'Poster removed.',
-    posterType: 'Use a JPEG, PNG, or WebP image.',
-    posterSize: 'The image is larger than 4.5 MB.',
+    posterType: 'This format is not supported. Use a JPEG, PNG, or WebP photo.',
+    posterHeic: 'This phone photo could not be read. Save it as a JPEG, then try again.',
+    posterSize: 'This file is too large to process. Choose an image of 25 MB or less.',
+    posterRead: 'This image is unreadable or damaged.',
+    posterOptimizing: 'Optimizing the image…',
+    posterOptimized: 'Image optimized. Save it to publish.',
+    posterUploading: 'Uploading the poster…',
     posterError: 'The poster could not be saved.',
     posterRemoveConfirm: 'Remove the poster from this event?',
     public: 'Public',
@@ -176,8 +187,13 @@ const COPY = {
     posterCancel: 'إلغاء المعاينة',
     posterSaved: 'تم حفظ الملصق.',
     posterRemoved: 'تمت إزالة الملصق.',
-    posterType: 'استخدم صورة JPEG أو PNG أو WebP.',
-    posterSize: 'الصورة أكبر من 4,5 ميغابايت.',
+    posterType: 'هذا التنسيق غير مدعوم. استخدم صورة JPEG أو PNG أو WebP.',
+    posterHeic: 'تعذر قراءة تنسيق الهاتف. احفظ الصورة بصيغة JPEG ثم أعد المحاولة.',
+    posterSize: 'هذا الملف أكبر مما يمكن معالجته. اختر صورة بحجم 25 ميغابايت أو أقل.',
+    posterRead: 'هذه الصورة تالفة أو غير قابلة للقراءة.',
+    posterOptimizing: 'جارٍ تحسين الصورة…',
+    posterOptimized: 'تم تحسين الصورة. احفظها لنشرها.',
+    posterUploading: 'جارٍ إرسال الملصق…',
     posterError: 'تعذر حفظ الملصق.',
     posterRemoveConfirm: 'إزالة ملصق هذا الحدث؟',
     public: 'عام',
@@ -222,7 +238,10 @@ export const EventDesk = ({ actor, canManage }) => {
   const [posterPreview, setPosterPreview] = useState('')
   const [posterNote, setPosterNote] = useState('')
   const [posterError, setPosterError] = useState('')
+  const [posterPhase, setPosterPhase] = useState('')
+  const [posterProgress, setPosterProgress] = useState(0)
   const [posterBusy, setPosterBusy] = useState(false)
+  const posterTicket = useRef(0)
 
   const loadList = () =>
     adminApi.events().then((data) => {
@@ -246,6 +265,7 @@ export const EventDesk = ({ actor, canManage }) => {
 
   useEffect(() => {
     loadDetail(currentId)
+    posterTicket.current += 1
     setPosterFile(null)
     setPosterPreview((current) => {
       if (current) URL.revokeObjectURL(current)
@@ -253,6 +273,8 @@ export const EventDesk = ({ actor, canManage }) => {
     })
     setPosterNote('')
     setPosterError('')
+    setPosterPhase('')
+    setPosterProgress(0)
   }, [currentId])
 
   useEffect(() => {
@@ -268,40 +290,66 @@ export const EventDesk = ({ actor, canManage }) => {
 
   const dirty = useMemo(() => Boolean(form && detail && JSON.stringify(form) !== JSON.stringify(detail.event)), [detail, form])
 
-  const choosePoster = (event) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
+  const posterProblem = (error) => copy[{ type: 'posterType', heic: 'posterHeic', size: 'posterSize', read: 'posterRead' }[error?.code]] || copy.posterError
+
+  const clearPosterDraft = () => {
+    posterTicket.current += 1
+    setPosterFile(null)
+    setPosterPhase('')
+    setPosterProgress(0)
     setPosterNote('')
     setPosterError('')
-    if (!file) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setPosterError(copy.posterType)
-      return
-    }
-    if (file.size > 4_500_000) {
-      setPosterError(copy.posterSize)
-      return
-    }
     setPosterPreview((current) => {
       if (current) URL.revokeObjectURL(current)
-      return URL.createObjectURL(file)
+      return ''
     })
-    setPosterFile(file)
+  }
+
+  const choosePoster = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const ticket = ++posterTicket.current
+    const displayable = /image\/(jpeg|jpg|png|webp)/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name || '')
+    setPosterFile(null)
+    setPosterNote('')
+    setPosterError('')
+    setPosterProgress(0)
+    setPosterPhase('optimizing')
+    setPosterPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return displayable ? URL.createObjectURL(file) : ''
+    })
+    try {
+      const prepared = await prepareEventPoster(file)
+      if (ticket !== posterTicket.current) return
+      if (!displayable) setPosterPreview(URL.createObjectURL(prepared.file))
+      setPosterFile(prepared.file)
+      setPosterPhase('ready')
+      setPosterNote(prepared.optimized ? copy.posterOptimized : copy.posterPending)
+    } catch (error) {
+      if (ticket !== posterTicket.current) return
+      setPosterFile(null)
+      setPosterPhase('')
+      setPosterError(posterProblem(error))
+    }
   }
 
   const savePoster = async () => {
-    if (!posterFile || !form?.id) return
+    if (!posterFile || !form?.id || posterPhase === 'optimizing') return
     const published = detail?.event?.status === 'published'
     if (published && !window.confirm(copy.confirmPublic)) return
     setPosterBusy(true)
+    setPosterPhase('uploading')
+    setPosterProgress(0)
     setPosterError('')
     setPosterNote('')
     try {
       let saved
       try {
-        saved = await adminApi.uploadEventBanner(form.id, posterFile, published)
+        saved = await adminApi.uploadEventBanner(form.id, posterFile, published, setPosterProgress)
       } catch (error) {
-        if (error.status === 409 && window.confirm(copy.confirmPublic)) saved = await adminApi.uploadEventBanner(form.id, posterFile, true)
+        if (error.status === 409 && window.confirm(copy.confirmPublic)) saved = await adminApi.uploadEventBanner(form.id, posterFile, true, setPosterProgress)
         else throw error
       }
       if (saved?.banner) setForm((current) => current && { ...current, banner: saved.banner })
@@ -310,9 +358,13 @@ export const EventDesk = ({ actor, canManage }) => {
         if (current) URL.revokeObjectURL(current)
         return ''
       })
+      setPosterPhase('')
+      setPosterProgress(1)
       setPosterNote(copy.posterSaved)
       loadDetail(form.id)
     } catch {
+      setPosterPhase('ready')
+      setPosterNote(copy.posterPending)
       setPosterError(copy.posterError)
     } finally {
       setPosterBusy(false)
@@ -475,24 +527,20 @@ export const EventDesk = ({ actor, canManage }) => {
           <div className="event-poster-frame">
             {posterPreview || form.banner ? <img src={posterPreview || form.banner} alt="" /> : <p>{copy.posterEmpty}</p>}
           </div>
-          {posterPreview ? <p className="event-poster-lead">{copy.posterPending}</p> : null}
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePoster} />
+          {posterPhase === 'optimizing' ? <p className="event-poster-lead">{copy.posterOptimizing}</p> : null}
+          {posterPhase === 'uploading' ? <p className="event-poster-lead">{copy.posterUploading}</p> : null}
+          {posterPhase === 'optimizing' || posterPhase === 'uploading' ? (
+            <div className={`event-poster-progress${posterPhase === 'optimizing' ? ' is-busy' : ''}`} aria-hidden="true">
+              <span style={posterPhase === 'uploading' ? { width: `${Math.round(posterProgress * 100)}%` } : undefined} />
+            </div>
+          ) : null}
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" disabled={posterBusy || posterPhase === 'optimizing'} onChange={choosePoster} />
           <div className="event-toolbar">
-            <button type="button" className="btn btn-primary" disabled={!posterFile || posterBusy} onClick={savePoster}>
-              {posterBusy ? copy.saving : copy.posterSave}
+            <button type="button" className="btn btn-primary" disabled={!posterFile || posterBusy || posterPhase === 'optimizing'} onClick={savePoster}>
+              {posterPhase === 'optimizing' ? copy.posterOptimizing : posterBusy ? copy.saving : copy.posterSave}
             </button>
             {posterPreview ? (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setPosterFile(null)
-                  setPosterPreview((current) => {
-                    if (current) URL.revokeObjectURL(current)
-                    return ''
-                  })
-                }}
-              >
+              <button type="button" className="btn btn-ghost" disabled={posterBusy} onClick={clearPosterDraft}>
                 {copy.posterCancel}
               </button>
             ) : null}
