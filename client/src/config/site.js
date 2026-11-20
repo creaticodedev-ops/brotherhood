@@ -70,10 +70,11 @@ const httpsUrl = (value) => {
 export const SOCIAL_LINKS = ['instagram', 'facebook', 'tiktok'].map((key) => ({ key, url: httpsUrl(SITE.social[key]) }))
 
 /**
- * Temporary public launch. Visitors only see membership registration.
- * Set this to false to restore the full public navigation and pages.
+ * Membership-campaign gate. While true, visitors only see the registration pages.
+ * False restores the official homepage, navigation, and public sections.
+ * Whether applications are accepted is decided only by the registration schedule.
  */
-export const MEMBERSHIP_LAUNCH = true
+export const MEMBERSHIP_LAUNCH = false
 
 /** Where "Commencer" leads until registration exists. */
 export const START_TARGET = 'offers'
