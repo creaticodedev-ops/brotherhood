@@ -9,7 +9,7 @@ import { StaffAccount, toStaff } from '../models/StaffAccount.js'
 import { can } from '../services/adminAuth.js'
 import { eventOps } from '../services/events.js'
 import { STORY_IMAGE_LIMIT, STORY_IMAGE_TYPES } from '../models/StoryImage.js'
-import { storeStoryImage } from '../services/storyMedia.js'
+import { markAttached, releaseUploads, storeStoryImage, uploadIdOf } from '../services/storyMedia.js'
 
 export const eventsAdminRouter = Router()
 
@@ -117,9 +117,14 @@ eventsAdminRouter.patch('/:id', manage, async (req, res, next) => {
     const before = toEvent(doc)
     const changed = publicChanged(before, { ...before, ...data })
     if (doc.status === 'published' && changed && req.body?.confirmPublic !== true) return res.status(409).json({ error: 'confirm', warnings })
+    const previousBanner = doc.banner
     Object.assign(doc, data, { updatedBy: req.actor.name })
     if (doc.status === 'published' && changed) doc.publicUpdatedAt = new Date()
     await doc.save()
+    const kept = uploadIdOf(doc.banner)
+    if (kept) await markAttached([kept])
+    const removed = uploadIdOf(previousBanner)
+    if (removed && removed !== kept) await releaseUploads([removed])
     await recordAudit(req.actor, 'event.update', 'event', doc._id, doc.title)
     res.json({ ...(await bundle(doc, req.actor)), warnings })
   } catch (error) {
@@ -172,12 +177,34 @@ eventsAdminRouter.post('/:id/banner', manage, express.raw({ type: STORY_IMAGE_TY
     const type = String(req.headers['content-type'] || '').split(';')[0]
     const stored = await storeStoryImage(type, req.body, req.actor)
     if (!stored) return res.status(422).json({ error: 'image' })
+    const previous = uploadIdOf(doc.banner)
+    const nextId = uploadIdOf(stored.src)
     doc.banner = stored.src
     doc.updatedBy = req.actor.name
     if (doc.status === 'published') doc.publicUpdatedAt = new Date()
     await doc.save()
+    if (nextId) await markAttached([nextId])
+    if (previous && previous !== nextId) await releaseUploads([previous])
     await recordAudit(req.actor, 'event.update', 'event', doc._id, 'banner')
     res.json({ banner: doc.banner })
+  } catch (error) {
+    next(error)
+  }
+})
+
+eventsAdminRouter.delete('/:id/banner', manage, async (req, res, next) => {
+  try {
+    const doc = await load(req.params.id)
+    if (!doc) return res.status(404).json({ error: 'Not found' })
+    if (doc.status === 'published' && req.headers['x-confirm-public'] !== 'yes') return res.status(409).json({ error: 'confirm' })
+    const previous = uploadIdOf(doc.banner)
+    doc.banner = ''
+    doc.updatedBy = req.actor.name
+    if (doc.status === 'published' && previous) doc.publicUpdatedAt = new Date()
+    await doc.save()
+    if (previous) await releaseUploads([previous])
+    await recordAudit(req.actor, 'event.update', 'event', doc._id, 'banner-removed')
+    res.json({ banner: '' })
   } catch (error) {
     next(error)
   }

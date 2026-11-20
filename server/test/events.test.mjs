@@ -109,6 +109,11 @@ test('the public PDF follows the published program and hides staff preparation',
   }
   const extra = await PDFDocument.load(await buildEventProgramPdf({ program: long, url: 'https://www.brotherhood07.com/events/childrens-day', fonts: pdfFonts }))
   assert.equal(extra.getPageCount() >= 2, true)
+  const poster = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  const withPoster = await buildEventProgramPdf({ program, url: 'https://www.brotherhood07.com/events/childrens-day', fonts: pdfFonts, poster })
+  const posted = await PDFDocument.load(withPoster)
+  assert.equal(posted.getPageCount(), 1)
+  assert.equal(withPoster.length > bytes.length, true)
 })
 
 test('staff can update only a task assigned to them', () => {

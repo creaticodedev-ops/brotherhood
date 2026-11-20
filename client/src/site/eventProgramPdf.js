@@ -140,7 +140,7 @@ const measure = (phases, fonts) => {
   })
 }
 
-export const buildEventProgramPdf = async ({ program, url, fonts, labels = {} }) => {
+export const buildEventProgramPdf = async ({ program, url, fonts, labels = {}, poster = null }) => {
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
   const regular = await doc.embedFont(fonts.regular, { subset: true })
@@ -149,6 +149,14 @@ export const buildEventProgramPdf = async ({ program, url, fonts, labels = {} })
   const faces = { regular, medium, display }
   const laid = measure(publicPhases(program), faces)
   const qr = await doc.embedPng(await pngBytes(url))
+  let posterImage = null
+  if (poster) {
+    try {
+      posterImage = await doc.embedPng(poster)
+    } catch {
+      posterImage = null
+    }
+  }
   const title = campaignTitle(program)
   const subtitle = program?.slug === 'childrens-day' ? latin(program.title) : ''
   const organizer = latin(program?.organizer || 'The Brotherhood').toUpperCase()
@@ -196,19 +204,32 @@ export const buildEventProgramPdf = async ({ program, url, fonts, labels = {} })
     page.drawRectangle({ x: M, y: PAGE_H - 30, width: 8, height: 8, color: RED })
     const afterName = track(page, medium, organizer, M + 16, PAGE_H - 28, 8, WHITE, 1.15)
     track(page, medium, presents, afterName + 12, PAGE_H - 28, 8, RED, 1.15)
-    const headline = title === "CHILDREN'S DAY" ? ["CHILDREN'S", 'DAY'] : wrap(display, title, 28, PAGE_W - M * 2 - 120)
+    const textLimit = PAGE_W - M * 2 - (posterImage ? 148 : 108)
+    const headline = title === "CHILDREN'S DAY" ? ["CHILDREN'S", 'DAY'] : wrap(display, title, 28, textLimit)
     let size = title === "CHILDREN'S DAY" ? 36 : 28
     const widest = headline.reduce((max, line) => Math.max(max, display.widthOfTextAtSize(line, size)), 0)
-    if (widest > PAGE_W - M * 2 - 108) size *= (PAGE_W - M * 2 - 108) / widest
+    if (widest > textLimit) size *= textLimit / widest
     headline.forEach((line, index) => {
       page.drawText(line, { x: M, y: PAGE_H - 72 - index * (size * 0.86), size, font: display, color: WHITE })
     })
     if (subtitle) page.drawText(subtitle, { x: M, y: PAGE_H - 78 - headline.length * (size * 0.86) - 6, size: 12, font: regular, color: rgb(0.9, 0.9, 0.88) })
-    page.drawCircle({ x: PAGE_W - 72, y: PAGE_H - 86, size: 30, borderColor: rgb(1, 1, 1), borderWidth: 0.7, opacity: 0.45 })
-    page.drawCircle({ x: PAGE_W - 72, y: PAGE_H - 86, size: 16, borderColor: RED, borderWidth: 1.4 })
-    if (windowLabel) {
-      const labelWidth = medium.widthOfTextAtSize(windowLabel, 8)
-      page.drawText(windowLabel, { x: PAGE_W - 72 - labelWidth / 2, y: PAGE_H - 132, size: 8, font: medium, color: WHITE })
+    if (posterImage) {
+      const maxW = 96
+      const maxH = 120
+      const scale = Math.min(maxW / posterImage.width, maxH / posterImage.height)
+      const w = posterImage.width * scale
+      const h = posterImage.height * scale
+      const x = PAGE_W - 26 - w
+      const imageY = PAGE_H - 20 - h
+      page.drawRectangle({ x: x - 3, y: imageY - 3, width: w + 6, height: h + 6, color: WHITE })
+      page.drawImage(posterImage, { x, y: imageY, width: w, height: h })
+    } else {
+      page.drawCircle({ x: PAGE_W - 72, y: PAGE_H - 86, size: 30, borderColor: rgb(1, 1, 1), borderWidth: 0.7, opacity: 0.45 })
+      page.drawCircle({ x: PAGE_W - 72, y: PAGE_H - 86, size: 16, borderColor: RED, borderWidth: 1.4 })
+      if (windowLabel) {
+        const labelWidth = medium.widthOfTextAtSize(windowLabel, 8)
+        page.drawText(windowLabel, { x: PAGE_W - 72 - labelWidth / 2, y: PAGE_H - 132, size: 8, font: medium, color: WHITE })
+      }
     }
     y = PAGE_H - HEADER - 20
   }
@@ -311,18 +332,46 @@ export const buildEventProgramPdf = async ({ program, url, fonts, labels = {} })
   return doc.save()
 }
 
+const posterPng = async (src) => {
+  if (!src) return null
+  try {
+    const response = await fetch(src)
+    if (!response.ok) return null
+    const blob = await response.blob()
+    const bitmap = await createImageBitmap(blob)
+    const longest = Math.max(bitmap.width, bitmap.height)
+    const scale = Math.min(1, 900 / longest)
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height)
+    bitmap.close?.()
+    const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+    return png ? new Uint8Array(await png.arrayBuffer()) : null
+  } catch {
+    return null
+  }
+}
+
 export const downloadEventProgram = async ({ program, url }) => {
-  const [regular, medium, display] = await Promise.all(
-    ['/fonts/Inter-Regular.ttf', '/fonts/Inter-Medium.ttf', '/fonts/InterTight-SemiBold.ttf'].map(async (path) => {
-      const response = await fetch(path)
-      if (!response.ok) throw new Error('font')
-      return new Uint8Array(await response.arrayBuffer())
-    }),
-  )
+  const loadFont = async (path) => {
+    const response = await fetch(path)
+    if (!response.ok) throw new Error('font')
+    return new Uint8Array(await response.arrayBuffer())
+  }
+  const [regular, medium, display, poster] = await Promise.all([
+    loadFont('/fonts/Inter-Regular.ttf'),
+    loadFont('/fonts/Inter-Medium.ttf'),
+    loadFont('/fonts/InterTight-SemiBold.ttf'),
+    posterPng(program?.banner),
+  ])
   const bytes = await buildEventProgramPdf({
     program,
     url,
     fonts: { regular, medium, display },
+    poster,
     labels: {
       official: 'Programme officiel',
       scan: 'Scanner pour ouvrir le programme',

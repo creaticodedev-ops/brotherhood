@@ -165,13 +165,15 @@ export const EventPage = ({ slug }) => {
 
   return (
     <article className="event-page">
-      <header className="event-hero">
-        <div className="event-hero-stage" aria-hidden="true">
-          <span className="event-orbit" />
-          <span className="event-orbit event-orbit-inner" />
-          {program.banner ? <img src={program.banner} alt="" /> : null}
-        </div>
-        <div className="container event-hero-copy">
+      <header className={`event-hero${program.banner ? ' has-poster' : ''}`}>
+        {program.banner ? null : (
+          <div className="event-hero-stage" aria-hidden="true">
+            <span className="event-orbit" />
+            <span className="event-orbit event-orbit-inner" />
+          </div>
+        )}
+        <div className="container event-hero-layout">
+        <div className="event-hero-copy">
           <p className="event-presents">
             <span />
             {presents}
@@ -221,6 +223,12 @@ export const EventPage = ({ slug }) => {
           </div>
           {pdfState === 'error' ? <p className="event-pdf-error">{copy.pdfError}</p> : null}
           {preview && state.publication !== 'published' ? <p className="event-kicker">{copy.preview}</p> : null}
+        </div>
+        {program.banner ? (
+          <figure className="event-poster">
+            <img src={program.banner} alt={program.title} />
+          </figure>
+        ) : null}
         </div>
       </header>
 

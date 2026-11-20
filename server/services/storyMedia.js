@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { BrotherhoodEvent } from '../models/BrotherhoodEvent.js'
 import { Story } from '../models/Story.js'
 import { STORY_IMAGE_LIMIT, STORY_IMAGE_TYPES, StoryImage } from '../models/StoryImage.js'
 
@@ -40,6 +41,7 @@ export const markAttached = (ids) => (ids.length ? StoryImage.updateMany({ _id: 
 
 const referencedElsewhere = async (id, exceptStoryId) => {
   const src = `${UPLOAD_PREFIX}${id}`
+  if (await BrotherhoodEvent.exists({ banner: src })) return true
   const filter = { $or: [{ cover: src }, { 'images.src': src }] }
   if (exceptStoryId) filter._id = { $ne: exceptStoryId }
   return Boolean(await Story.exists(filter))

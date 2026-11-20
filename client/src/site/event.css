@@ -52,21 +52,45 @@
   background: linear-gradient(var(--green), transparent);
 }
 
-.event-hero-stage img {
-  position: absolute;
-  width: min(34vw, 360px);
-  aspect-ratio: 1;
-  object-fit: cover;
-  inset-inline-end: 4vw;
-  top: calc(var(--nav-h) + 86px);
-  border-radius: 50%;
-  opacity: 0.9;
+
+.event-hero-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+}
+
+.event-hero.has-poster {
+  align-items: center;
+}
+
+.event-hero.has-poster .event-hero-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(200px, 360px);
+  gap: 28px 40px;
 }
 
 .event-hero-copy {
-  position: relative;
-  z-index: 1;
   max-width: 920px;
+}
+
+.event-poster {
+  margin: 0;
+  justify-self: end;
+  width: min(100%, 360px);
+}
+
+.event-poster img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(72vh, 640px);
+  margin-inline: auto;
+  object-fit: contain;
+  border-radius: 18px;
+  background: #090b0a;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
 }
 
 .event-presents {
@@ -532,15 +556,17 @@
 
   .event-orbit,
   .event-orbit-inner,
-  .event-hero-stage::before,
-  .event-hero-stage img {
+  .event-hero-stage::before {
     opacity: 0.35;
   }
 
-  .event-hero-stage img {
-    width: 140px;
-    inset-inline-end: -20px;
-    top: calc(var(--nav-h) - 10px);
+  .event-hero.has-poster .event-hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .event-poster {
+    width: min(100%, 420px);
+    justify-self: start;
   }
 
   .event-live,
@@ -635,5 +661,10 @@
   .event-hero-stage,
   .event-pulse {
     display: none;
+  }
+
+  .event-poster img {
+    max-height: 280px;
+    box-shadow: none;
   }
 }

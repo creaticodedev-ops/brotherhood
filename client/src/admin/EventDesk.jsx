@@ -39,6 +39,19 @@ const COPY = {
     days: { friday: 'Vendredi', saturday: 'Samedi', event: 'Jour J', after: 'Après' },
     teams: { reception: 'Accueil', entertainment: 'Animation', workshops: 'Ateliers', logistics: 'Logistique', gifts: 'Cadeaux', photography: 'Photo', dismantling: 'Démontage' },
     fields: { title: 'Titre', organizer: 'Organisateur', date: 'Date', location: 'Lieu', summary: 'Résumé', parents: 'Informations parents', banner: 'Image', phase: 'Phase', activity: 'Activité', start: 'Début', end: 'Fin', visibility: 'Visibilité', team: 'Équipe', assignee: 'Responsable', detail: 'Description', notes: 'Note interne', noticeTitle: 'Titre', noticeBody: 'Message' },
+    posterTitle: 'Photo / Affiche de l’événement',
+    posterLead: 'Cette image est l’affiche publique. Elle s’affiche sur la page et dans le PDF.',
+    posterEmpty: 'Aucune affiche pour le moment.',
+    posterPending: 'Aperçu — pas encore enregistré.',
+    posterSave: 'Enregistrer l’affiche',
+    posterRemove: 'Retirer l’affiche',
+    posterCancel: 'Annuler l’aperçu',
+    posterSaved: 'Affiche enregistrée.',
+    posterRemoved: 'Affiche retirée.',
+    posterType: 'Utilisez une image JPEG, PNG ou WebP.',
+    posterSize: 'L’image dépasse 4,5 Mo.',
+    posterError: 'L’affiche n’a pas pu être enregistrée.',
+    posterRemoveConfirm: 'Retirer l’affiche de cet événement ?',
     public: 'Public',
     internal: 'Interne',
     until: 'Dans',
@@ -90,6 +103,19 @@ const COPY = {
     days: { friday: 'Friday', saturday: 'Saturday', event: 'Event day', after: 'After' },
     teams: { reception: 'Reception', entertainment: 'Entertainment', workshops: 'Workshops', logistics: 'Logistics', gifts: 'Gifts', photography: 'Photography', dismantling: 'Dismantling' },
     fields: { title: 'Title', organizer: 'Organizer', date: 'Date', location: 'Location', summary: 'Summary', parents: 'Information for parents', banner: 'Image', phase: 'Phase', activity: 'Activity', start: 'Start', end: 'End', visibility: 'Visibility', team: 'Team', assignee: 'Owner', detail: 'Description', notes: 'Internal note', noticeTitle: 'Title', noticeBody: 'Message' },
+    posterTitle: 'Event photo / poster',
+    posterLead: 'This is the public poster. It appears on the page and in the PDF.',
+    posterEmpty: 'No poster yet.',
+    posterPending: 'Preview — not saved yet.',
+    posterSave: 'Save poster',
+    posterRemove: 'Remove poster',
+    posterCancel: 'Cancel preview',
+    posterSaved: 'Poster saved.',
+    posterRemoved: 'Poster removed.',
+    posterType: 'Use a JPEG, PNG, or WebP image.',
+    posterSize: 'The image is larger than 4.5 MB.',
+    posterError: 'The poster could not be saved.',
+    posterRemoveConfirm: 'Remove the poster from this event?',
     public: 'Public',
     internal: 'Internal',
     until: 'In',
@@ -141,6 +167,19 @@ const COPY = {
     days: { friday: 'الجمعة', saturday: 'السبت', event: 'يوم الفعالية', after: 'بعدها' },
     teams: { reception: 'الاستقبال', entertainment: 'التنشيط', workshops: 'الورشات', logistics: 'اللوجستيك', gifts: 'الهدايا', photography: 'التصوير', dismantling: 'التفكيك' },
     fields: { title: 'العنوان', organizer: 'الجهة المنظمة', date: 'التاريخ', location: 'المكان', summary: 'الملخص', parents: 'معلومات للآباء', banner: 'صورة', phase: 'المرحلة', activity: 'النشاط', start: 'البداية', end: 'النهاية', visibility: 'الظهور', team: 'الفريق', assignee: 'المسؤول', detail: 'الوصف', notes: 'ملاحظة داخلية', noticeTitle: 'العنوان', noticeBody: 'الرسالة' },
+    posterTitle: 'صورة / ملصق الحدث',
+    posterLead: 'هذه هي الصورة العامة. تظهر في الصفحة وفي ملف PDF.',
+    posterEmpty: 'لا توجد صورة بعد.',
+    posterPending: 'معاينة — لم يُحفظ بعد.',
+    posterSave: 'حفظ الملصق',
+    posterRemove: 'إزالة الملصق',
+    posterCancel: 'إلغاء المعاينة',
+    posterSaved: 'تم حفظ الملصق.',
+    posterRemoved: 'تمت إزالة الملصق.',
+    posterType: 'استخدم صورة JPEG أو PNG أو WebP.',
+    posterSize: 'الصورة أكبر من 4,5 ميغابايت.',
+    posterError: 'تعذر حفظ الملصق.',
+    posterRemoveConfirm: 'إزالة ملصق هذا الحدث؟',
     public: 'عام',
     internal: 'داخلي',
     until: 'بعد',
@@ -179,6 +218,11 @@ export const EventDesk = ({ actor, canManage }) => {
   const [saving, setSaving] = useState(false)
   const [taskDraft, setTaskDraft] = useState({ title: '', detail: '', team: '', day: 'event', start: '', priority: 'normal', assigneeId: '', checklist: '' })
   const [noticeDraft, setNoticeDraft] = useState({ title: '', body: '', urgent: false, requiresAck: true })
+  const [posterFile, setPosterFile] = useState(null)
+  const [posterPreview, setPosterPreview] = useState('')
+  const [posterNote, setPosterNote] = useState('')
+  const [posterError, setPosterError] = useState('')
+  const [posterBusy, setPosterBusy] = useState(false)
 
   const loadList = () =>
     adminApi.events().then((data) => {
@@ -202,6 +246,13 @@ export const EventDesk = ({ actor, canManage }) => {
 
   useEffect(() => {
     loadDetail(currentId)
+    setPosterFile(null)
+    setPosterPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return ''
+    })
+    setPosterNote('')
+    setPosterError('')
   }, [currentId])
 
   useEffect(() => {
@@ -216,6 +267,82 @@ export const EventDesk = ({ actor, canManage }) => {
   }, [detail, form])
 
   const dirty = useMemo(() => Boolean(form && detail && JSON.stringify(form) !== JSON.stringify(detail.event)), [detail, form])
+
+  const choosePoster = (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    setPosterNote('')
+    setPosterError('')
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setPosterError(copy.posterType)
+      return
+    }
+    if (file.size > 4_500_000) {
+      setPosterError(copy.posterSize)
+      return
+    }
+    setPosterPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return URL.createObjectURL(file)
+    })
+    setPosterFile(file)
+  }
+
+  const savePoster = async () => {
+    if (!posterFile || !form?.id) return
+    const published = detail?.event?.status === 'published'
+    if (published && !window.confirm(copy.confirmPublic)) return
+    setPosterBusy(true)
+    setPosterError('')
+    setPosterNote('')
+    try {
+      let saved
+      try {
+        saved = await adminApi.uploadEventBanner(form.id, posterFile, published)
+      } catch (error) {
+        if (error.status === 409 && window.confirm(copy.confirmPublic)) saved = await adminApi.uploadEventBanner(form.id, posterFile, true)
+        else throw error
+      }
+      if (saved?.banner) setForm((current) => current && { ...current, banner: saved.banner })
+      setPosterFile(null)
+      setPosterPreview((current) => {
+        if (current) URL.revokeObjectURL(current)
+        return ''
+      })
+      setPosterNote(copy.posterSaved)
+      loadDetail(form.id)
+    } catch {
+      setPosterError(copy.posterError)
+    } finally {
+      setPosterBusy(false)
+    }
+  }
+
+  const removePoster = async () => {
+    if (!form?.id || !form.banner) return
+    const published = detail?.event?.status === 'published'
+    if (!window.confirm(published ? copy.confirmPublic : copy.posterRemoveConfirm)) return
+    setPosterBusy(true)
+    setPosterError('')
+    setPosterNote('')
+    try {
+      let saved
+      try {
+        saved = await adminApi.removeEventBanner(form.id, published)
+      } catch (error) {
+        if (error.status === 409 && window.confirm(copy.confirmPublic)) saved = await adminApi.removeEventBanner(form.id, true)
+        else throw error
+      }
+      setForm((current) => current && { ...current, banner: saved?.banner || '' })
+      setPosterNote(copy.posterRemoved)
+      loadDetail(form.id)
+    } catch {
+      setPosterError(copy.posterError)
+    } finally {
+      setPosterBusy(false)
+    }
+  }
   const mine = (detail?.tasks || []).filter((task) => task.assigneeId === actor?.id)
   const shownTasks = dayMode ? mine.filter((task) => task.status !== 'done') : canManage && tab === 'operations' ? detail?.tasks || [] : mine.length ? mine : detail?.tasks || []
 
@@ -342,6 +469,45 @@ export const EventDesk = ({ actor, canManage }) => {
       ) : null}
 
       {canManage && tab === 'program' && form ? (
+        <section className="event-card event-poster-admin">
+          <h2>{copy.posterTitle}</h2>
+          <p className="event-poster-lead">{copy.posterLead}</p>
+          <div className="event-poster-frame">
+            {posterPreview || form.banner ? <img src={posterPreview || form.banner} alt="" /> : <p>{copy.posterEmpty}</p>}
+          </div>
+          {posterPreview ? <p className="event-poster-lead">{copy.posterPending}</p> : null}
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePoster} />
+          <div className="event-toolbar">
+            <button type="button" className="btn btn-primary" disabled={!posterFile || posterBusy} onClick={savePoster}>
+              {posterBusy ? copy.saving : copy.posterSave}
+            </button>
+            {posterPreview ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setPosterFile(null)
+                  setPosterPreview((current) => {
+                    if (current) URL.revokeObjectURL(current)
+                    return ''
+                  })
+                }}
+              >
+                {copy.posterCancel}
+              </button>
+            ) : null}
+            {form.banner ? (
+              <button type="button" className="btn btn-ghost" disabled={posterBusy} onClick={removePoster}>
+                {copy.posterRemove}
+              </button>
+            ) : null}
+          </div>
+          {posterNote ? <p className="event-poster-lead">{posterNote}</p> : null}
+          {posterError ? <p className="event-poster-error">{posterError}</p> : null}
+        </section>
+      ) : null}
+
+      {canManage && tab === 'program' && form ? (
         <form
           className="event-card event-fields"
           onSubmit={(event) => {
@@ -355,31 +521,6 @@ export const EventDesk = ({ actor, canManage }) => {
           <label>{copy.fields.location}<input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} /></label>
           <label className="event-span">{copy.fields.summary}<textarea rows="3" value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} /></label>
           <label className="event-span">{copy.fields.parents}<textarea rows="3" value={form.parentInfo} onChange={(event) => setForm({ ...form, parentInfo: event.target.value })} /></label>
-          <label className="event-span">
-            {copy.fields.banner}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={async (event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                if (!file || !form.id) return
-                try {
-                  let saved
-                  try {
-                    saved = await adminApi.uploadEventBanner(form.id, file, false)
-                  } catch (error) {
-                    if (error.status === 409 && window.confirm(copy.confirmPublic)) saved = await adminApi.uploadEventBanner(form.id, file, true)
-                    else throw error
-                  }
-                  if (saved?.banner) setForm((current) => ({ ...current, banner: saved.banner }))
-                  loadDetail(form.id)
-                } catch {
-                  setError(copy.loadError)
-                }
-              }}
-            />
-          </label>
           <div className="event-span">
             {form.phases.map((phase, phaseIndex) => (
               <article key={`${phase.key}-${phaseIndex}`} className="event-phase-card">

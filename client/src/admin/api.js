@@ -127,4 +127,15 @@ export const adminApi = {
       xhr.onerror = () => reject(Object.assign(new Error('network'), { status: 0, body: {} }))
       xhr.send(blob)
     }),
+  removeEventBanner: async (id, confirmPublic) => {
+    const response = await fetch(`/api/admin/events/${encodeURIComponent(id)}/banner`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: confirmPublic ? { 'x-confirm-public': 'yes' } : undefined,
+    })
+    const data = await response.json().catch(() => ({}))
+    if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+    if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { status: response.status, body: data })
+    return data
+  },
 }
