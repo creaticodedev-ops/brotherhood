@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import test from 'node:test'
+import { buildEventProgramPdf, pdfScript } from '../../client/src/site/eventProgramPdf.js'
 import { CHILDREN_DAY, canUpdateTask, liveState, publicProgram, readProgram, validateProgram } from '../../shared/eventProgram.js'
 import { parseZonedInput } from '../../shared/registrationWindow.js'
 
 const require = createRequire(new URL('../../client/package.json', import.meta.url))
 const QRCode = require('qrcode')
+const { PDFDocument } = require('pdf-lib')
 
 const published = { ...CHILDREN_DAY, status: 'published', publicUpdatedAt: '2026-11-20T12:00:00.000Z' }
 
@@ -72,6 +75,40 @@ test('the public program QR is generated locally and points at the event page', 
   assert.equal(svg.startsWith('<svg'), true)
   assert.equal(svg.includes(url), false)
   assert.equal(png.startsWith('data:image/png;base64,'), true)
+})
+
+const pdfFonts = {
+  regular: readFileSync(new URL('../../client/public/fonts/Inter-Regular.ttf', import.meta.url)),
+  medium: readFileSync(new URL('../../client/public/fonts/Inter-Medium.ttf', import.meta.url)),
+  display: readFileSync(new URL('../../client/public/fonts/InterTight-SemiBold.ttf', import.meta.url)),
+}
+
+test('the public PDF follows the published program and hides staff preparation', async () => {
+  const program = publicProgram(published)
+  const script = pdfScript(CHILDREN_DAY)
+  assert.equal(script[0], "CHILDREN'S DAY")
+  assert.equal(script.includes("Journée de l'enfance"), true)
+  assert.equal(script.includes('Spectacle de magie'), true)
+  assert.equal(script.includes('Démontage'), false)
+  assert.equal(script.includes('Préparation'), false)
+  assert.equal(script.includes('Installation'), false)
+  assert.equal(script.includes('reception'), false)
+  const changed = { ...program, phases: program.phases.map((phase) => ({ ...phase, activities: phase.activities.map((item) => ({ ...item })) })) }
+  changed.phases[1].activities[0] = { ...changed.phases[1].activities[0], title: 'Spectacle modifié' }
+  assert.equal(pdfScript(changed).includes('Spectacle modifié'), true)
+  assert.equal(pdfScript(program).includes('Spectacle modifié'), false)
+  const bytes = await buildEventProgramPdf({ program, url: 'https://www.brotherhood07.com/events/childrens-day', fonts: pdfFonts })
+  assert.equal(Buffer.from(bytes).subarray(0, 4).toString(), '%PDF')
+  const doc = await PDFDocument.load(bytes)
+  assert.equal(doc.getPageCount(), 1)
+  assert.equal(bytes.length < 700000, true)
+  const long = {
+    ...program,
+    parentInfo: 'Les parents restent avec leur groupe pendant les ateliers. '.repeat(40),
+    phases: [...program.phases, ...program.phases].map((phase, index) => ({ ...phase, key: `${phase.key}-${index}`, title: `${phase.title} ${index}` })),
+  }
+  const extra = await PDFDocument.load(await buildEventProgramPdf({ program: long, url: 'https://www.brotherhood07.com/events/childrens-day', fonts: pdfFonts }))
+  assert.equal(extra.getPageCount() >= 2, true)
 })
 
 test('staff can update only a task assigned to them', () => {
