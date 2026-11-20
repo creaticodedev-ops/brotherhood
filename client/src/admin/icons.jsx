@@ -154,6 +154,13 @@ export const JournalIcon = () => (
   </Icon>
 )
 
+export const EventIcon = () => (
+  <Icon>
+    <rect x="3" y="3.5" width="12" height="11" rx="2" />
+    <path d="M6 2.5v2.5M12 2.5v2.5M3 7.5h12M6.5 10.5h2" />
+  </Icon>
+)
+
 export const CalendarIcon = () => (
   <Icon>
     <rect x="2.5" y="3.5" width="13" height="12" rx="2" />

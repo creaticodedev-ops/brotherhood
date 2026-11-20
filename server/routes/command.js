@@ -23,6 +23,7 @@ export const AUDIT_AREAS = {
   team: /^staff\./,
   content: /^story\./,
   registration: /^registration\./,
+  events: /^event\./,
 }
 const AUDIT_PAGE = 50
 

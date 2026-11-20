@@ -3,6 +3,7 @@ import '../landing/landing.css'
 import '../landing/hero.css'
 import './site.css'
 import { Home } from './Home'
+import { EventPage } from './EventPage'
 import { Recruit } from './Recruit'
 import { About, Archive, Creative, NotFound, Privacy, SocialPage, StoryPage } from './Pages'
 import { MEMBERSHIP_LAUNCH } from '../config/site'
@@ -27,6 +28,8 @@ const match = (pathname) => {
   if (path === '/privacy') return { name: 'privacy', path }
   const finalize = path.match(/^\/finalize\/([A-Za-z0-9_-]{20,80})$/)
   if (finalize) return { name: 'finalize', path, token: finalize[1] }
+  const event = path.match(/^\/events\/([a-z0-9-]+)$/)
+  if (event) return { name: 'event', path, slug: event[1] }
   const mission = path.match(/^\/missions\/([a-z0-9-]+)$/)
   if (mission) return { name: 'story', path, slug: mission[1] }
   const activity = path.match(/^\/activities\/([a-z0-9-]+)$/)
@@ -62,6 +65,7 @@ export const SiteApp = () => {
   if (route.name === 'missions') page = <Archive kind="mission" />
   if (route.name === 'activities') page = <Archive kind="activity" />
   if (route.name === 'story') page = <StoryPage key={route.slug} slug={route.slug} />
+  if (route.name === 'event') page = <EventPage key={route.slug} slug={route.slug} />
   if (route.name === 'creative') page = <Creative />
   if (route.name === 'social') page = <SocialPage />
   if (route.name === 'join') {

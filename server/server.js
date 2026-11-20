@@ -9,8 +9,10 @@ import { newsRouter } from './routes/news.js'
 import { finalizeRouter } from './routes/finalize.js'
 import { registrationsRouter } from './routes/registrations.js'
 import { storiesRouter } from './routes/stories.js'
+import { eventsRouter } from './routes/events.js'
 import { adminConfigured, loadAdminAccount } from './services/adminAuth.js'
 import { seedStories } from './services/stories.js'
+import { seedEvents } from './services/events.js'
 
 const PORT = Number(process.env.PORT) || 5000
 const HOST = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1')
@@ -42,6 +44,7 @@ app.use('/api/news', newsRouter)
 app.use('/api/registrations', registrationsRouter)
 app.use('/api/finalize', finalizeRouter)
 app.use('/api/stories', storiesRouter)
+app.use('/api/events', eventsRouter)
 app.use('/api/media', mediaRouter)
 app.use('/api/admin', adminRouter)
 
@@ -57,6 +60,7 @@ app.use((err, _req, res, _next) => {
 if (await connectDB()) {
   await migrateLegacyStatuses().catch((error) => console.error('[db] Status migration failed:', error.message))
   await seedStories().catch((error) => console.error('[stories] Seed failed:', error.message))
+  await seedEvents().catch((error) => console.error('[events] Seed failed:', error.message))
   await loadAdminAccount().catch((error) => console.error('[admin] Account loading failed:', error.message))
   if (!adminConfigured()) console.warn('[admin] No administrator account yet - set ADMIN_PASSWORD (12 characters minimum) in server/.env and restart')
 }

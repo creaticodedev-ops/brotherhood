@@ -206,6 +206,11 @@ export const Footer = () => {
                       <A href={href}>{pack.nav[key]}</A>
                     </li>
                   ))}
+              {MEMBERSHIP_LAUNCH ? null : (
+                <li>
+                  <A href="/events/childrens-day">{pack.nav.program}</A>
+                </li>
+              )}
               <li>
                 <A href="/join">{pack.nav.join}</A>
               </li>

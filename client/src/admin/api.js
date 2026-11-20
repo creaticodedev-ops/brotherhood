@@ -97,4 +97,34 @@ export const adminApi = {
   saveWhatsAppDefaults: (body) => request('/whatsapp-defaults', { method: 'PUT', body }),
   registrationWindow: (signal) => request('/registration-window', { signal }),
   saveRegistrationWindow: (body) => request('/registration-window', { method: 'PUT', body }),
+  events: (signal) => request('/events', { signal }),
+  event: (id, signal) => request(`/events/${encodeURIComponent(id)}`, { signal }),
+  saveEvent: (id, body) => request(id ? `/events/${encodeURIComponent(id)}` : '/events', { method: id ? 'PATCH' : 'POST', body }),
+  eventAction: (id, action) => request(`/events/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: {} }),
+  saveTask: (eventId, task) => request(task.id ? `/events/${encodeURIComponent(eventId)}/tasks/${encodeURIComponent(task.id)}` : `/events/${encodeURIComponent(eventId)}/tasks`, { method: task.id ? 'PATCH' : 'POST', body: task }),
+  deleteTask: (eventId, taskId) => request(`/events/${encodeURIComponent(eventId)}/tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' }),
+  saveNotice: (eventId, body) => request(`/events/${encodeURIComponent(eventId)}/notices`, { method: 'POST', body }),
+  ackNotice: (eventId, id) => request(`/events/${encodeURIComponent(eventId)}/notices/${encodeURIComponent(id)}/ack`, { method: 'POST', body: {} }),
+  eventRoster: (signal) => request('/events/roster', { signal }),
+  uploadEventBanner: (id, blob, confirmPublic) =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `/api/admin/events/${encodeURIComponent(id)}/banner`)
+      xhr.withCredentials = true
+      xhr.setRequestHeader('content-type', blob.type)
+      if (confirmPublic) xhr.setRequestHeader('x-confirm-public', 'yes')
+      xhr.onload = () => {
+        let data = {}
+        try {
+          data = JSON.parse(xhr.responseText || '{}')
+        } catch {
+          data = {}
+        }
+        if (xhr.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+        else reject(Object.assign(new Error(data.error || `HTTP ${xhr.status}`), { status: xhr.status, body: data }))
+      }
+      xhr.onerror = () => reject(Object.assign(new Error('network'), { status: 0, body: {} }))
+      xhr.send(blob)
+    }),
 }

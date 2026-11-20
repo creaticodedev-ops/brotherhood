@@ -10,7 +10,7 @@ test('the catalog lists every permission exactly once', () => {
 })
 
 test('staff can receive the operational permissions they had before, never the admin-only ones', () => {
-  assert.deepEqual(STAFF_PERMISSIONS, ['recruitment.review', 'recruitment.decide', 'members.read', 'missions.manage', 'finance.record', 'finance.approve'])
+  assert.deepEqual(STAFF_PERMISSIONS, ['recruitment.review', 'recruitment.decide', 'members.read', 'missions.manage', 'finance.record', 'finance.approve', 'events.operate'])
   ADMIN_ONLY_PERMISSIONS.forEach((permission) => assert.equal(grantableFor('staff').includes(permission), false))
   assert.deepEqual(grantableFor('admin'), ALL_PERMISSIONS)
 })

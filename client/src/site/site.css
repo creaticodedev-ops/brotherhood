@@ -2766,3 +2766,29 @@ html[lang='ar'] .mission-title {
 .photo-pick.has-photo {
   border-style: solid;
 }
+
+.program-link {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 640px);
+  margin: 28px 0 8px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.program-link strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.03em;
+}
+
+.program-link span:last-child {
+  color: var(--text-muted);
+}
+
+.program-link:hover,
+.program-link:focus-visible {
+  border-color: rgba(255, 41, 72, 0.55);
+}

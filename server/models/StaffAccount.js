@@ -5,12 +5,12 @@ export const STAFF_ROLES = ['admin', 'staff']
 /** Every permission the API enforces, grouped by module. The admin client renders exactly this list. */
 export const PERMISSION_GROUPS = [
   { id: 'recruitment', permissions: ['recruitment.review', 'recruitment.decide', 'recruitment.delete', 'members.read'] },
-  { id: 'operations', permissions: ['missions.manage', 'finance.record', 'finance.approve'] },
-  { id: 'administration', permissions: ['registration.manage', 'content.manage', 'audit.read'] },
+  { id: 'operations', permissions: ['missions.manage', 'finance.record', 'finance.approve', 'events.operate'] },
+  { id: 'administration', permissions: ['registration.manage', 'content.manage', 'audit.read', 'events.manage'] },
 ]
 export const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap((group) => group.permissions)
 /** Permissions that can only be granted to the Admin role. */
-export const ADMIN_ONLY_PERMISSIONS = ['recruitment.delete', 'registration.manage', 'content.manage', 'audit.read']
+export const ADMIN_ONLY_PERMISSIONS = ['recruitment.delete', 'registration.manage', 'content.manage', 'audit.read', 'events.manage']
 export const STAFF_PERMISSIONS = ALL_PERMISSIONS.filter((permission) => !ADMIN_ONLY_PERMISSIONS.includes(permission))
 
 export const grantableFor = (role) => (role === 'admin' ? ALL_PERMISSIONS : STAFF_PERMISSIONS)

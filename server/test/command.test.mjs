@@ -39,5 +39,6 @@ test('journal areas group the recorded actions by module', () => {
   assert.deepEqual(area('staff.permissions'), ['team'])
   assert.deepEqual(area('story.order'), ['content'])
   assert.deepEqual(area('registration.update'), ['registration'])
+  assert.deepEqual(area('event.publish'), ['events'])
   assert.deepEqual(area('unknown'), [])
 })

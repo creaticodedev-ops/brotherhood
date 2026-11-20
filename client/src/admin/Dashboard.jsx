@@ -11,7 +11,8 @@ import { MissionsDesk } from './MissionsDesk'
 import { TeamDesk } from './TeamDesk'
 import { formatCount } from './format'
 import { ContentDesk } from './ContentDesk'
-import { ApplicationsIcon, BellIcon, CalendarIcon, CloseIcon, ContentIcon, ExternalIcon, JournalIcon, LogoutIcon, MenuIcon, MissionIcon, OverviewIcon, SettingsIcon, TeamIcon, WalletIcon } from './icons'
+import { EventDesk } from './EventDesk'
+import { ApplicationsIcon, BellIcon, CalendarIcon, CloseIcon, ContentIcon, EventIcon, ExternalIcon, JournalIcon, LogoutIcon, MenuIcon, MissionIcon, OverviewIcon, SettingsIcon, TeamIcon, WalletIcon } from './icons'
 import { NotificationPanel, Toasts } from './NotificationCenter'
 import { useOpsCopy } from './opsCopy'
 import { ErrorState, LoadingState } from './parts'
@@ -33,6 +34,7 @@ const VIEW_PATHS = {
   audit: '/admin/audit',
   content: '/admin/content',
   registration: '/admin/registration',
+  events: '/admin/events',
   settings: '/admin/settings',
 }
 
@@ -179,7 +181,7 @@ export const Dashboard = ({ onLogout }) => {
     [setRead, dismissToast, openApplication],
   )
 
-  const pendingCount = (stats.data?.statuses?.pending.count || 0) + (stats.data?.statuses?.new.count || 0)
+  const pendingCount = (stats.data?.statuses?.pending?.count || 0) + (stats.data?.statuses?.new?.count || 0)
   const permit = (permission) => Boolean(actor?.permissions?.includes('*') || actor?.permissions?.includes(permission))
   const superAdmin = actor?.superAdmin === true
   const show = {
@@ -192,6 +194,7 @@ export const Dashboard = ({ onLogout }) => {
     content: permit('content.manage'),
     settings: superAdmin,
     registration: permit('registration.manage'),
+    events: permit('events.manage') || permit('events.operate'),
     notifications: permit('recruitment.review') || permit('recruitment.decide') || permit('members.read'),
   }
 
@@ -253,6 +256,7 @@ export const Dashboard = ({ onLogout }) => {
           {show.content || show.registration ? <p className="adm-nav-group">{a('nav.groupSite')}</p> : null}
           {show.content ? navLink('content', ContentIcon) : null}
           {show.registration ? navLink('registration', CalendarIcon) : null}
+          {show.events ? navLink('events', EventIcon) : null}
           {show.team || show.audit || show.settings ? <p className="adm-nav-group">{a('nav.groupAdmin')}</p> : null}
           {show.team ? navLink('team', TeamIcon) : null}
           {show.audit ? navLink('audit', JournalIcon) : null}
@@ -346,6 +350,8 @@ export const Dashboard = ({ onLogout }) => {
             <Settings />
           ) : route.view === 'registration' ? (
             <RegistrationDesk />
+          ) : route.view === 'events' ? (
+            <EventDesk actor={actor} canManage={permit('events.manage')} />
           ) : route.view === 'content' ? (
             <ContentDesk key={route.intent?.key} intent={route.intent} />
           ) : route.view === 'applications' ? (

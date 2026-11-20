@@ -5,6 +5,7 @@ import { Notification, toNotification } from '../models/Notification.js'
 import { DURATIONS, OFFER_IDS, Registration, STATUSES, TRANSITIONS, toApplication } from '../models/Registration.js'
 import { Story } from '../models/Story.js'
 import { storiesAdminRouter } from './storiesAdmin.js'
+import { eventsAdminRouter } from './eventsAdmin.js'
 import { publish, subscribe } from '../services/adminEvents.js'
 import { recordAudit } from '../models/AuditEvent.js'
 import { readStoredPortrait, rememberLocalPortrait, removePortrait } from '../services/portrait.js'
@@ -672,6 +673,7 @@ adminRouter.post('/registrations/:id/payment/reject', recruitment, async (req, r
 })
 
 adminRouter.use('/stories', storiesAdminRouter)
+adminRouter.use('/events', eventsAdminRouter)
 
 /* ── Statistics (computed from the database on every request) ── */
 

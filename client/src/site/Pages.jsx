@@ -63,6 +63,13 @@ export const Archive = ({ kind }) => {
       <p className="kicker">{copy.kicker}</p>
       <h1 className="page-title">{copy.title}</h1>
       <p className="lead">{copy.lead}</p>
+      {kind === 'activity' ? (
+        <A className="program-link" href="/events/childrens-day">
+          <span className="kicker">{pack.archive.programKicker}</span>
+          <strong>{pack.archive.programTitle}</strong>
+          <span>{pack.archive.programLead}</span>
+        </A>
+      ) : null}
       <form
         className="filters"
         onSubmit={(event) => {
